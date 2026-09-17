@@ -7,10 +7,10 @@ import Logo from "@/components/common/logo";
 
 const navItems = [
   { label: "HOME", href: "/" },
-  { label: "VEHICLES", href: "/vehicles" },
-  { label: "HOW IT WORKS", href: "/booking/airport-transfer" },
-  { label: "FEEDBACKS", href: "/feedback" },
-  { label: "CONTACT US", href: "/contact" },
+  { label: "VEHICLES", href: "/customer/vehicles" },
+  { label: "HOW IT WORKS", href: "/customer/booking/airport-transfer" },
+  { label: "FEEDBACKS", href: "/customer/feedback" },
+  { label: "CONTACT US", href: "/customer/contact" },
 ];
 
 export default function Header() {
@@ -70,7 +70,7 @@ export default function Header() {
           {/* Login Icon */}
           <div className="group relative">
             <Link
-              href="/login"
+              href="/customer/login"
               aria-label="Login"
               className="flex h-10 w-10 items-center justify-center rounded-full text-[#17251B] transition-all duration-200 hover:bg-[#F5F7F5] hover:text-[var(--green-primary)]"
             >
