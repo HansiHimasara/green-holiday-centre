@@ -1,5 +1,12 @@
 import type { Metadata } from "next";
+import { Nunito_Sans } from "next/font/google";
+
 import "./globals.css";
+
+const nunito = Nunito_Sans({
+  subsets: ["latin"],
+  variable: "--font-nunito",
+});
 
 export const metadata: Metadata = {
   title: {
@@ -16,7 +23,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={nunito.variable}>
       <body>{children}</body>
     </html>
   );

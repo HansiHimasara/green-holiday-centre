@@ -9,7 +9,6 @@ interface ServiceTabsProps {
   active: ServiceType;
 }
 
-// Booking service tabs and customer-side routes
 const tabs: {
   label: string;
   value: ServiceType;
@@ -44,10 +43,10 @@ export default function ServiceTabs({
           <Link
             key={tab.value}
             href={tab.href}
-            className={`rounded-md border px-6 py-3 text-sm font-semibold transition-colors ${
+            className={`rounded-md border px-5 py-2.5 text-[13px] font-semibold transition-colors ${
               isActive
                 ? "border-[var(--green-dark)] bg-[var(--green-dark)] text-white"
-                : "border-[var(--border-light)] bg-white text-gray-500 hover:border-[var(--green-primary)] hover:text-[var(--green-primary)]"
+                : "border-[var(--border-light)] bg-white text-[var(--text-secondary)] hover:border-[var(--green-primary)] hover:text-[var(--green-primary)]"
             }`}
           >
             {tab.label}

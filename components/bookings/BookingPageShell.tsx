@@ -14,10 +14,8 @@ export default function BookingPageShell({
     <>
       <Header />
 
-      <main className="bg-[var(--surface)] py-8">
-        <div className="mx-auto w-full max-w-[1280px] px-6 md:px-10">
-          {children}
-        </div>
+      <main className="min-h-screen bg-white">
+        {children}
       </main>
 
       <Footer />
