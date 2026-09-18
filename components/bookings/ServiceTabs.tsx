@@ -9,22 +9,25 @@ interface ServiceTabsProps {
   active: ServiceType;
 }
 
-// Booking service tabs and their routes
-const tabs = [
+const tabs: {
+  label: string;
+  value: ServiceType;
+  href: string;
+}[] = [
   {
     label: "Airport Transfers",
     value: "airport-transfer",
-    href: "/booking/airport-transfer",
+    href: "/customer/booking/airport-transfer",
   },
   {
     label: "Day Tours",
     value: "day-tour",
-    href: "/booking/day-tour",
+    href: "/customer/booking/day-tour",
   },
   {
     label: "Round Tours",
     value: "round-tour",
-    href: "/booking/round-tour",
+    href: "/customer/booking/round-tour",
   },
 ];
 
@@ -40,10 +43,10 @@ export default function ServiceTabs({
           <Link
             key={tab.value}
             href={tab.href}
-            className={`rounded-md border px-6 py-3 text-sm font-semibold transition-colors ${
+            className={`rounded-md border px-5 py-2.5 text-[13px] font-semibold transition-colors ${
               isActive
                 ? "border-[var(--green-dark)] bg-[var(--green-dark)] text-white"
-                : "border-[var(--border-light)] bg-white text-gray-500 hover:border-[var(--green-primary)] hover:text-[var(--green-primary)]"
+                : "border-[var(--border-light)] bg-white text-[var(--text-secondary)] hover:border-[var(--green-primary)] hover:text-[var(--green-primary)]"
             }`}
           >
             {tab.label}

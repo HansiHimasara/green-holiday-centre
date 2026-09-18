@@ -67,7 +67,12 @@ body {
   background: var(--background);
   color: var(--text-primary);
 
-  font-family: Arial, Helvetica, sans-serif;
+  /* Main UI font */
+  font-family: var(--font-nunito), Arial, Helvetica, sans-serif;
+
+  /* Slightly smaller and cleaner body text */
+  font-size: 14px;
+  line-height: 1.5;
 
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -104,6 +109,7 @@ img {
    TYPOGRAPHY
  */
 
+/* Keep the original heading style */
 h1,
 h2,
 h3,
@@ -120,6 +126,10 @@ h6 {
 
 p {
   margin: 0;
+}
+
+small {
+  font-size: 12px;
 }
 
 /* 

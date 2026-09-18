@@ -12,17 +12,15 @@ export default function Textarea({
 }: TextareaProps) {
   return (
     <div className="w-full">
-      {/* Optional label */}
       {label && (
-        <label className="mb-2 block text-[13px] font-semibold text-[var(--text-primary)]">
+        <label className="mb-2 block text-[13px] font-bold text-[var(--text-primary)]">
           {label}
         </label>
       )}
 
-      {/* Reusable textarea */}
       <textarea
         {...props}
-        className={`min-h-[110px] w-full resize-none rounded-md border border-[var(--border-light)] bg-white px-4 py-3 text-sm text-[var(--text-primary)] outline-none transition-colors placeholder:text-gray-400 focus:border-[var(--green-primary)] ${className}`}
+        className={`min-h-[92px] w-full resize-none rounded-md border border-[#DDE4DE] bg-white px-4 py-3 text-[14px] text-[var(--text-primary)] outline-none transition-colors placeholder:text-[#7D8981] focus:border-[var(--green-primary)] ${className}`}
       />
     </div>
   );
