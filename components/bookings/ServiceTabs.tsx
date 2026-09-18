@@ -9,22 +9,26 @@ interface ServiceTabsProps {
   active: ServiceType;
 }
 
-// Booking service tabs and their routes
-const tabs = [
+// Booking service tabs and customer-side routes
+const tabs: {
+  label: string;
+  value: ServiceType;
+  href: string;
+}[] = [
   {
     label: "Airport Transfers",
     value: "airport-transfer",
-    href: "/booking/airport-transfer",
+    href: "/customer/booking/airport-transfer",
   },
   {
     label: "Day Tours",
     value: "day-tour",
-    href: "/booking/day-tour",
+    href: "/customer/booking/day-tour",
   },
   {
     label: "Round Tours",
     value: "round-tour",
-    href: "/booking/round-tour",
+    href: "/customer/booking/round-tour",
   },
 ];
 
