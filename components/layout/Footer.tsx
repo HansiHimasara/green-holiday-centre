@@ -4,18 +4,18 @@ import Logo from "@/components/common/logo";
 export default function Footer() {
   return (
     <footer className="bg-[var(--green-deep)] text-white/75">
-      <div className="mx-auto w-full max-w-[1280px] px-10 pb-8 pt-16">
+      <div className="mx-auto w-full max-w-[1280px] px-10 pb-5 pt-10">
         {/* Main Footer */}
-        <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1.4fr] lg:gap-20">
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1.4fr] lg:gap-16">
           {/* Company */}
           <div>
             <Logo
               size="small"
               variant="white"
-              className="mb-7"
+              className="mb-5"
             />
 
-            <p className="max-w-[360px] text-sm leading-7 text-white/75">
+            <p className="max-w-[360px] text-sm leading-6 text-white/75">
               Premium luxury transportation and customized private tours
               across Sri Lanka. Experience the teardrop island in
               unparalleled comfort.
@@ -24,11 +24,11 @@ export default function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h3 className="mb-5 font-sans text-xs font-bold uppercase tracking-[0.08em] text-[var(--green-light)]">
+            <h3 className="mb-4 font-sans text-xs font-bold uppercase tracking-[0.08em] text-[var(--green-light)]">
               Quick Links
             </h3>
 
-            <div className="flex flex-col gap-4 text-sm">
+            <div className="flex flex-col gap-2.5 text-sm">
               <FooterLink href="/">Home</FooterLink>
               <FooterLink href="/vehicles">Vehicles</FooterLink>
               <FooterLink href="/booking/airport-transfer">
@@ -41,11 +41,11 @@ export default function Footer() {
 
           {/* Services */}
           <div>
-            <h3 className="mb-5 font-sans text-xs font-bold uppercase tracking-[0.08em] text-[var(--green-light)]">
+            <h3 className="mb-4 font-sans text-xs font-bold uppercase tracking-[0.08em] text-[var(--green-light)]">
               Our Services
             </h3>
 
-            <div className="flex flex-col gap-4 text-sm">
+            <div className="flex flex-col gap-2.5 text-sm">
               <FooterLink href="/booking/airport-transfer">
                 Airport Transfers
               </FooterLink>
@@ -62,11 +62,11 @@ export default function Footer() {
 
           {/* Contact Details */}
           <div>
-            <h3 className="mb-5 font-sans text-xs font-bold uppercase tracking-[0.08em] text-[var(--green-light)]">
+            <h3 className="mb-4 font-sans text-xs font-bold uppercase tracking-[0.08em] text-[var(--green-light)]">
               Contact Details
             </h3>
 
-            <div className="space-y-4 text-sm">
+            <div className="space-y-2.5 text-sm">
               <p>42 Galle Road, Colombo 03, Sri Lanka</p>
 
               <a
@@ -80,10 +80,10 @@ export default function Footer() {
         </div>
 
         {/* Divider */}
-        <div className="mt-14 border-t border-white/10" />
+        <div className="mt-8 border-t border-white/10" />
 
         {/* Bottom Section */}
-        <div className="flex flex-col gap-6 py-7 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-white/60">
             © 2026 Green Holiday (Pvt) Ltd. All Rights Reserved.
           </p>

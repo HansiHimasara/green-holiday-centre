@@ -1,11 +1,17 @@
 import type { Metadata } from "next";
-import { Nunito_Sans } from "next/font/google";
+import { Cormorant_Garamond, Nunito_Sans } from "next/font/google";
 
 import "./globals.css";
 
 const nunito = Nunito_Sans({
   subsets: ["latin"],
   variable: "--font-nunito",
+});
+
+const cormorant = Cormorant_Garamond({
+  subsets: ["latin"],
+  variable: "--font-display",
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
@@ -23,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={nunito.variable}>
+    <html lang="en" className={`${nunito.variable} ${cormorant.variable}`}>
       <body>{children}</body>
     </html>
   );

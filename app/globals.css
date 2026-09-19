@@ -1,48 +1,63 @@
 @import "tailwindcss";
 
-/* 
+/*
    GREEN HOLIDAY - GLOBAL THEME
- */
+*/
 
 :root {
-  /* Brand Colors */
---green-primary: #439646;
---green-dark: #0b6b4b;
---green-deep: #087052;
---green-light: #90c543;
+  /* =========================
+     BRAND COLORS
+  ========================= */
 
-/* Additional Greens */
---green-forest: #075B45;
---green-jungle: #167A4D;
---green-leaf: #4FAE4F;
+  --green-primary: #439646;
+  --green-dark: #0b6b4b;
+  --green-deep: #087052;
+  --green-light: #90c543;
 
-/* Yellow / Gold */
---yellow-golden: #F2C94C;
---yellow-warm: #F6D365;
---gold-mustard: #D9A441;
+  /* Additional Greens */
+  --green-forest: #075b45;
+  --green-jungle: #167a4d;
+  --green-leaf: #4fae4f;
 
-/* Earth / Neutral */
---sand: #E8D7B5;
---earth-brown: #8A6845;
+  /* Yellow / Gold */
+  --yellow-golden: #f2c94c;
+  --yellow-warm: #f6d365;
+  --gold-mustard: #d9a441;
 
-/* Small Accent */
---sky-blue: #5BA7C9;
+  /* Earth / Neutral */
+  --sand: #e8d7b5;
+  --earth-brown: #8a6845;
 
-  /* Background Colors */
+  /* Small Accent */
+  --sky-blue: #5ba7c9;
+
+  /* =========================
+     BACKGROUND COLORS
+  ========================= */
+
   --background: #ffffff;
   --surface: #f5f7f5;
   --surface-soft: #f3f6f3;
 
-  /* Text Colors */
+  /* =========================
+     TEXT COLORS
+  ========================= */
+
   --text-primary: #17251b;
   --text-secondary: #66736a;
   --text-muted: #78837c;
 
-  /* Border Colors */
+  /* =========================
+     BORDER COLORS
+  ========================= */
+
   --border: #dce3dd;
   --border-light: #e6ebe7;
 
-  /* Status Colors */
+  /* =========================
+     STATUS COLORS
+  ========================= */
+
   --success: #2f9e44;
   --success-bg: #dff7e5;
 
@@ -52,18 +67,24 @@
   --danger: #dc2626;
   --danger-bg: #fee2e2;
 
-  /* Layout */
+  /* =========================
+     LAYOUT
+  ========================= */
+
   --container-width: 1180px;
 
-  /* Border Radius */
+  /* =========================
+     BORDER RADIUS
+  ========================= */
+
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
 }
 
-/* 
+/*
    GLOBAL RESET
- */
+*/
 
 * {
   box-sizing: border-box;
@@ -80,6 +101,10 @@ body {
   min-height: 100%;
 }
 
+/*
+   BODY
+*/
+
 body {
   background: var(--background);
   color: var(--text-primary);
@@ -87,7 +112,6 @@ body {
   /* Main UI font */
   font-family: var(--font-nunito), Arial, Helvetica, sans-serif;
 
-  /* Slightly smaller and cleaner body text */
   font-size: 14px;
   line-height: 1.5;
 
@@ -96,9 +120,9 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* 
+/*
    BASIC ELEMENTS
- */
+*/
 
 a {
   color: inherit;
@@ -122,11 +146,12 @@ img {
   height: auto;
 }
 
-/* 
+/*
    TYPOGRAPHY
- */
+*/
 
-/* Keep the original heading style */
+/* Premium display font for all headings */
+
 h1,
 h2,
 h3,
@@ -137,30 +162,33 @@ h6 {
 
   color: var(--green-dark);
 
-  font-family: Georgia, "Times New Roman", serif;
-  font-weight: 700;
+  font-family: var(--font-display), Georgia, "Times New Roman", serif;
 }
+
+/* Paragraphs */
 
 p {
   margin: 0;
 }
 
+/* Small text */
+
 small {
   font-size: 12px;
 }
 
-/* 
+/*
    SELECTION
- */
+*/
 
 ::selection {
   background: var(--green-primary);
   color: #ffffff;
 }
 
-/* 
+/*
    SCROLLBAR
- */
+*/
 
 ::-webkit-scrollbar {
   width: 8px;
