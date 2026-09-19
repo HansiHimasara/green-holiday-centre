@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+
 import BookingPageShell from "@/components/bookings/BookingPageShell";
 import BookingStepHeader from "@/components/bookings/BookingStepHeader";
 import ServiceTabs from "@/components/bookings/ServiceTabs";
@@ -8,6 +12,93 @@ import Textarea from "@/components/ui/Textarea";
 import Button from "@/components/ui/Button";
 
 export default function DayTourPage() {
+  // ==========================================
+  // FORM STATE
+  // ==========================================
+
+  const [tourDate, setTourDate] = useState("");
+  const [passengers, setPassengers] = useState(1);
+  const [vehicleSearch, setVehicleSearch] = useState("");
+  const [selectedVehicle, setSelectedVehicle] = useState("");
+  const [luggage, setLuggage] = useState("");
+  const [meetingLocation, setMeetingLocation] = useState("");
+  const [specialRequirements, setSpecialRequirements] = useState("");
+
+  // ==========================================
+  // TEMPORARY VEHICLE DATA
+  // Replace this with database data later
+  // ==========================================
+
+  const vehicles = [
+    {
+      id: "toyota-prius",
+      name: "Toyota Prius",
+      category: "Premium Sedan",
+    },
+    {
+      id: "toyota-kdh",
+      name: "Toyota KDH",
+      category: "Executive Minivan",
+    },
+    {
+      id: "toyota-hiace",
+      name: "Toyota Hiace",
+      category: "Executive Minivan",
+    },
+    {
+      id: "toyota-rav4",
+      name: "Toyota RAV4",
+      category: "Luxury SUV",
+    },
+    {
+      id: "mercedes-s-class",
+      name: "Mercedes S-Class",
+      category: "Luxury Sedan",
+    },
+  ];
+
+  // ==========================================
+  // VEHICLE SEARCH
+  // ==========================================
+
+  const filteredVehicles = vehicles.filter((vehicle) => {
+    const search = vehicleSearch.toLowerCase();
+
+    return (
+      vehicle.name.toLowerCase().includes(search) ||
+      vehicle.category.toLowerCase().includes(search)
+    );
+  });
+
+  // ==========================================
+  // PASSENGER CONTROLS
+  // ==========================================
+
+  const increasePassengers = () => {
+    setPassengers((current) => current + 1);
+  };
+
+  const decreasePassengers = () => {
+    setPassengers((current) => Math.max(1, current - 1));
+  };
+
+  const handlePassengerInput = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const value = event.target.value;
+
+    if (value === "") {
+      setPassengers(1);
+      return;
+    }
+
+    const number = Number(value);
+
+    if (!Number.isNaN(number)) {
+      setPassengers(Math.max(1, number));
+    }
+  };
+
   return (
     <BookingPageShell>
       {/* ==========================================
@@ -35,58 +126,178 @@ export default function DayTourPage() {
       <section className="bg-[#F5F7F5] py-9">
         <div className="mx-auto w-full max-w-[1280px] px-6 md:px-10">
           <div className="mt-1 space-y-8">
-            <Input
-              label="Tour Date"
-              type="date"
-            />
+            {/* ==========================================
+                DATE + PASSENGERS
+            ========================================== */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              {/* Tour Date */}
+              <div>
+                <label
+                  htmlFor="tour-date"
+                  className="mb-2 block text-[13px] font-bold text-[var(--text-primary)]"
+                >
+                  Tour Date
+                </label>
 
-            <Select
-              label="Number of Passengers"
-              placeholder="Select Passenger Count"
-              options={[
-                { label: "1 Passenger", value: "1" },
-                { label: "2 Passengers", value: "2" },
-                { label: "3 Passengers", value: "3" },
-                { label: "4 Passengers", value: "4" },
-                { label: "5 Passengers", value: "5" },
-                { label: "6+ Passengers", value: "6+" },
-              ]}
-            />
+                <div className="relative">
+                  <input
+                    id="tour-date"
+                    type="date"
+                    value={tourDate}
+                    onChange={(event) => setTourDate(event.target.value)}
+                    min={new Date().toISOString().split("T")[0]}
+                    className="h-[48px] w-full rounded-md border border-[var(--border-light)] bg-white px-4 text-[14px] text-[var(--text-primary)] outline-none transition focus:border-[var(--primary-green)] focus:ring-1 focus:ring-[var(--primary-green)]"
+                  />
+                </div>
+              </div>
 
-            <Select
-              label="Selected Vehicle Preference"
-              placeholder="Search & Select Fleet Class"
-              options={[
-                {
-                  label: "Premium Sedan",
-                  value: "premium-sedan",
-                },
-                {
-                  label: "Executive Minivan",
-                  value: "executive-minivan",
-                },
-                {
-                  label: "Luxury SUV",
-                  value: "luxury-suv",
-                },
-              ]}
-            />
+              {/* Number of Passengers */}
+              <div>
+                <label className="mb-2 block text-[13px] font-bold text-[var(--text-primary)]">
+                  Number of Passengers
+                </label>
 
+                <div className="flex h-[48px] w-full items-center rounded-md border border-[var(--border-light)] bg-white">
+                  {/* Minus */}
+                  <button
+                    type="button"
+                    onClick={decreasePassengers}
+                    disabled={passengers <= 1}
+                    className="flex h-full w-14 items-center justify-center text-[22px] font-medium text-[var(--text-primary)] transition hover:bg-[#F5F7F5] disabled:cursor-not-allowed disabled:opacity-40"
+                    aria-label="Decrease passengers"
+                  >
+                    −
+                  </button>
+
+                  {/* Number Input */}
+                  <input
+                    type="number"
+                    min="1"
+                    value={passengers}
+                    onChange={handlePassengerInput}
+                    className="h-full flex-1 border-x border-[var(--border-light)] bg-transparent text-center text-[15px] font-semibold text-[var(--text-primary)] outline-none"
+                    aria-label="Number of passengers"
+                  />
+
+                  {/* Plus */}
+                  <button
+                    type="button"
+                    onClick={increasePassengers}
+                    className="flex h-full w-14 items-center justify-center text-[22px] font-medium text-[var(--text-primary)] transition hover:bg-[#F5F7F5]"
+                    aria-label="Increase passengers"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* ==========================================
+                VEHICLE SEARCH
+            ========================================== */}
+            <div>
+              <label
+                htmlFor="vehicle-search"
+                className="mb-2 block text-[13px] font-bold text-[var(--text-primary)]"
+              >
+                Selected Vehicle Preference
+              </label>
+
+              <div className="relative">
+                <Input
+                  id="vehicle-search"
+                  placeholder="Search vehicle or fleet class..."
+                  value={vehicleSearch}
+                  onChange={(event) => {
+                    setVehicleSearch(event.target.value);
+                    setSelectedVehicle("");
+                  }}
+                />
+
+                {/* Suggestions */}
+                {vehicleSearch.trim() !== "" &&
+                  selectedVehicle === "" && (
+                    <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-20 overflow-hidden rounded-md border border-[var(--border-light)] bg-white shadow-lg">
+                      {filteredVehicles.length > 0 ? (
+                        filteredVehicles.map((vehicle) => (
+                          <button
+                            key={vehicle.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedVehicle(vehicle.id);
+                              setVehicleSearch(vehicle.name);
+                            }}
+                            className="flex w-full items-center justify-between px-4 py-3 text-left transition hover:bg-[#F5F7F5]"
+                          >
+                            <span className="text-[14px] font-medium text-[var(--text-primary)]">
+                              {vehicle.name}
+                            </span>
+
+                            <span className="text-[12px] text-[#66736A]">
+                              {vehicle.category}
+                            </span>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 text-[13px] text-[#66736A]">
+                          No vehicles found.
+                        </div>
+                      )}
+                    </div>
+                  )}
+              </div>
+
+              {/* Selected Vehicle */}
+              {selectedVehicle && (
+                <p className="mt-2 text-[12px] text-[#66736A]">
+                  Vehicle selected:{" "}
+                  <span className="font-semibold text-[var(--text-primary)]">
+                    {vehicleSearch}
+                  </span>
+                </p>
+              )}
+            </div>
+
+            {/* ==========================================
+                LUGGAGE
+            ========================================== */}
             <Select
               label="Luggage Requirements"
               placeholder="Select Bag Count"
+              value={luggage}
+              onChange={(event) => setLuggage(event.target.value)}
               options={[
-                { label: "No Luggage", value: "0" },
-                { label: "1 Bag", value: "1" },
-                { label: "2 Bags", value: "2" },
-                { label: "3 Bags", value: "3" },
-                { label: "4+ Bags", value: "4+" },
+                {
+                  label: "No Luggage",
+                  value: "0",
+                },
+                {
+                  label: "1 Bag",
+                  value: "1",
+                },
+                {
+                  label: "2 Bags",
+                  value: "2",
+                },
+                {
+                  label: "3 Bags",
+                  value: "3",
+                },
+                {
+                  label: "4+ Bags",
+                  value: "4+",
+                },
               ]}
             />
 
-            {/* Meeting Location */}
+            {/* ==========================================
+                MEETING LOCATION
+            ========================================== */}
             <div>
-              <label className="mb-2 block text-[13px] font-bold text-[var(--text-primary)]">
+              <label
+                htmlFor="meeting-location"
+                className="mb-2 block text-[13px] font-bold text-[var(--text-primary)]"
+              >
                 Meeting Location
               </label>
 
@@ -96,7 +307,7 @@ export default function DayTourPage() {
                   width="17"
                   height="17"
                   fill="none"
-                  stroke="currentColor"
+                  stroke="var(--green-primary)"
                   strokeWidth="1.8"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -107,17 +318,32 @@ export default function DayTourPage() {
                 </svg>
 
                 <Input
+                  id="meeting-location"
                   className="pl-11"
                   placeholder="Enter your hotel or pickup location"
+                  value={meetingLocation}
+                  onChange={(event) =>
+                    setMeetingLocation(event.target.value)
+                  }
                 />
               </div>
             </div>
 
+            {/* ==========================================
+                SPECIAL REQUIREMENTS
+            ========================================== */}
             <Textarea
               label="Special Requirements / Tour Destinations"
               placeholder="Specify places you would like to visit, preferred start time, or any other requirements..."
+              value={specialRequirements}
+              onChange={(event) =>
+                setSpecialRequirements(event.target.value)
+              }
             />
 
+            {/* ==========================================
+                CONTINUE BUTTON
+            ========================================== */}
             <div className="flex justify-end pt-1">
               <Button
                 href="/customer/booking/customer-details"

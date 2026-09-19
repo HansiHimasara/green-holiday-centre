@@ -62,13 +62,31 @@ export default function RoundTourNights() {
               )}
             </div>
 
-            <Input
-              value={night.value}
-              onChange={(event) =>
-                updateNight(night.id, event.target.value)
-              }
-              placeholder={`Enter destination for night ${index + 1}`}
-            />
+            <div className="relative">
+              <svg
+                viewBox="0 0 24 24"
+                width="17"
+                height="17"
+                fill="none"
+                stroke="var(--green-primary)"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="absolute left-4 top-1/2 -translate-y-1/2"
+              >
+                <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />
+                <circle cx="12" cy="10" r="2.5" />
+              </svg>
+
+              <Input
+                className="pl-11"
+                value={night.value}
+                onChange={(event) =>
+                  updateNight(night.id, event.target.value)
+                }
+                placeholder={`Enter destination for night ${index + 1}`}
+              />
+            </div>
           </div>
         ))}
       </div>
