@@ -20,7 +20,7 @@ export default function FeatureItem({
 
       {/* Feature text */}
       <div>
-        <h3 className="font-serif font-semibold text-[var(--green-dark)]">
+        <h3 className="font-serif text-[20px] font-bold text-[var(--green-dark)]">
           {title}
         </h3>
 
