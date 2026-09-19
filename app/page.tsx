@@ -79,7 +79,8 @@ export default function HomePage() {
 
           <div className="relative z-10 mx-auto flex min-h-[535px] w-full max-w-[1280px] items-center px-10">
             <div className="max-w-[820px]">
-              <h1 className="max-w-[800px] font-serif text-[52px] leading-[1.12] font-medium text-white">
+              {/* White hero heading */}
+              <h1 className="max-w-[800px] font-serif text-[52px] leading-[1.12] font-medium !text-white">
                 You Experience. We Make Travel Happen.
               </h1>
 
@@ -90,9 +91,10 @@ export default function HomePage() {
               </p>
 
               <div className="mt-8">
+                {/* Light green button + dark green text */}
                 <Button
                   href="/customer/vehicles"
-                  className="bg-[var(--green-light)] px-7 py-4 text-[var(--green-dark)] hover:bg-[#7db633]"
+                  className="bg-[var(--green-light)] px-7 py-4 !text-white hover:bg-[#7db633]"
                 >
                   Book Your Vehicle
                 </Button>
@@ -239,7 +241,7 @@ export default function HomePage() {
   );
 }
 
-/*Icons*/
+/* Icons */
 
 function ServiceIcon() {
   return (
