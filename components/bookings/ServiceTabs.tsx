@@ -35,7 +35,7 @@ export default function ServiceTabs({
   active,
 }: ServiceTabsProps) {
   return (
-    <div className="flex flex-wrap gap-4">
+    <div className="flex flex-wrap gap-3">
       {tabs.map((tab) => {
         const isActive = active === tab.value;
 
@@ -43,13 +43,75 @@ export default function ServiceTabs({
           <Link
             key={tab.value}
             href={tab.href}
-            className={`rounded-md border px-5 py-2.5 text-[13px] font-semibold transition-colors ${
-              isActive
-                ? "border-[var(--green-dark)] bg-[var(--green-dark)] text-white"
-                : "border-[var(--border-light)] bg-white text-[var(--text-secondary)] hover:border-[var(--green-primary)] hover:text-[var(--green-primary)]"
-            }`}
+            className={`
+              group relative overflow-hidden
+              rounded-md
+              border
+              px-6 py-3
+              text-[12px]
+              font-extrabold
+              uppercase
+              tracking-[0.12em]
+              transition-all
+              duration-300
+              ease-out
+
+              ${
+                isActive
+                  ? `
+                    border-[var(--green-dark)]
+                    bg-[var(--green-dark)]
+                    !text-white
+                    translate-y-[-2px]
+                    shadow-[0_6px_0_var(--green-forest),0_10px_20px_rgba(7,91,69,0.20)]
+                  `
+                  : `
+                    border-[var(--green-leaf)]/40
+                    bg-white
+                    text-[var(--green-forest)]
+                    shadow-sm
+                    hover:-translate-y-1
+                    hover:border-[var(--green-primary)]
+                    hover:bg-[var(--green-primary)]
+                    hover:!text-white
+                    hover:shadow-[0_5px_0_var(--green-forest),0_8px_16px_rgba(7,91,69,0.15)]
+                  `
+              }
+            `}
           >
-            {tab.label}
+            {/* Soft animated highlight */}
+            {isActive && (
+              <span
+                className="
+                  pointer-events-none
+                  absolute inset-0
+                  -translate-x-full
+                  bg-gradient-to-r
+                  from-transparent
+                  via-white/15
+                  to-transparent
+                  transition-transform
+                  duration-700
+                  group-hover:translate-x-full
+                "
+              />
+            )}
+
+            {/* Inner highlight */}
+            {isActive && (
+              <span
+                className="
+                  pointer-events-none
+                  absolute inset-x-2 top-1
+                  h-px
+                  bg-white/20
+                "
+              />
+            )}
+
+            <span className="relative z-10">
+              {tab.label}
+            </span>
           </Link>
         );
       })}

@@ -28,7 +28,7 @@ export default function Button({
   // Different visual styles
   const variants = {
     primary:
-      "bg-[var(--green-primary)] text-white hover:bg-[var(--green-dark)]",
+      "bg-[var(--green-primary)] !text-white hover:bg-[var(--green-dark)]",
 
     outline:
       "border border-[var(--green-primary)] bg-white text-[var(--green-primary)] hover:bg-[#F5F7F5]",

@@ -6,10 +6,27 @@
 
 :root {
   /* Brand Colors */
-  --green-primary: #439646;
-  --green-dark: #0b6b4b;
-  --green-deep: #087052;
-  --green-light: #90c543;
+--green-primary: #439646;
+--green-dark: #0b6b4b;
+--green-deep: #087052;
+--green-light: #90c543;
+
+/* Additional Greens */
+--green-forest: #075B45;
+--green-jungle: #167A4D;
+--green-leaf: #4FAE4F;
+
+/* Yellow / Gold */
+--yellow-golden: #F2C94C;
+--yellow-warm: #F6D365;
+--gold-mustard: #D9A441;
+
+/* Earth / Neutral */
+--sand: #E8D7B5;
+--earth-brown: #8A6845;
+
+/* Small Accent */
+--sky-blue: #5BA7C9;
 
   /* Background Colors */
   --background: #ffffff;
