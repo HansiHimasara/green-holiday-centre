@@ -27,25 +27,52 @@ export default function Select({
         </label>
       )}
 
-      <select
-        {...props}
-        className={`h-[46px] w-full rounded-md border border-[#DDE4DE] bg-white px-4 text-[14px] text-[var(--text-secondary)] outline-none transition-colors focus:border-[var(--green-primary)] ${className}`}
-      >
-        {placeholder && (
-          <option value="">
-            {placeholder}
-          </option>
-        )}
+      <div className="relative">
+        <select
+          {...props}
+          className={`h-[46px] w-full appearance-none rounded-md border border-[#DDE4DE] bg-white px-4 pr-11 text-[14px] text-[var(--text-secondary)] outline-none transition-colors focus:border-[var(--green-primary)] ${className}`}
+        >
+          {placeholder && (
+            <option value="">
+              {placeholder}
+            </option>
+          )}
 
-        {options.map((option) => (
-          <option
-            key={option.value}
-            value={option.value}
+          {options.map((option) => (
+            <option
+              key={option.value}
+              value={option.value}
+            >
+              {option.label}
+            </option>
+          ))}
+        </select>
+
+        {/* Custom dropdown arrow */}
+        <span
+          className="
+            pointer-events-none
+            absolute
+            right-4
+            top-1/2
+            -translate-y-1/2
+            text-[var(--green-dark)]
+          "
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
           >
-            {option.label}
-          </option>
-        ))}
-      </select>
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </span>
+      </div>
     </div>
   );
 }
