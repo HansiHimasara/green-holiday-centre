@@ -5,6 +5,7 @@ import ServiceTabs from "@/components/bookings/ServiceTabs";
 import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
 import Button from "@/components/ui/Button";
+import DecorativePattern from "@/components/ui/DecorativePattern";
 
 export default function CustomerDetailsPage() {
   return (
@@ -12,18 +13,23 @@ export default function CustomerDetailsPage() {
       {/* ==========================================
           TOP WHITE AREA
       ========================================== */}
-      <section className="bg-white">
-        <div className="mx-auto w-full max-w-[1280px] px-6 pt-7 md:px-10">
-          <ServiceTabs active="airport-transfer" />
-        </div>
+      <section className="relative overflow-hidden bg-white">
 
-        <div className="mt-10 border-b border-[var(--border-light)]">
-          <div className="mx-auto w-full max-w-[1280px] px-6 pb-6 md:px-10">
-            <BookingStepHeader
-              title="Your Personal Details"
-              step={2}
-              totalSteps={4}
-            />
+        <div className="relative z-10">
+          {/* Service Tabs */}
+          <div className="mx-auto w-full max-w-[1280px] px-6 pt-7 md:px-10">
+            <ServiceTabs active="airport-transfer" />
+          </div>
+
+          {/* Step Header */}
+          <div className="mt-10 border-b border-[var(--border-light)]">
+            <div className="mx-auto w-full max-w-[1280px] px-6 pb-6 md:px-10">
+              <BookingStepHeader
+                title="Your Personal Details"
+                step={2}
+                totalSteps={4}
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -31,36 +37,44 @@ export default function CustomerDetailsPage() {
       {/* ==========================================
           FORM AREA
       ========================================== */}
-      <section className="bg-[#F5F7F5] py-9">
-        <div className="mx-auto w-full max-w-[1280px] px-6 md:px-10">
+      <section className="relative overflow-hidden bg-[#F5F7F5] py-10">
+        <DecorativePattern position="bottom-right" />
+
+        <div className="relative z-10 mx-auto w-full max-w-[1280px] px-6 md:px-10">
           <div className="space-y-8">
+            {/* Full Name */}
             <Input
               label="Full Name"
               placeholder="Enter your full name"
             />
 
+            {/* Email */}
             <Input
               label="Email Address"
               type="email"
               placeholder="Enter your email address"
             />
 
+            {/* WhatsApp */}
             <Input
               label="WhatsApp Contact Number"
               type="tel"
               placeholder="+94 77 123 4567"
             />
 
+            {/* Passport */}
             <Input
               label="Passport Number"
               placeholder="Enter passport number"
             />
 
+            {/* Special Requests */}
             <Textarea
               label="Special Requests / Notes About Your Requirements"
               placeholder="Specify any special requests, medical requirements, child seat requirements, or anything else..."
             />
 
+            {/* Navigation */}
             <div className="flex items-center justify-between pt-1">
               <Button
                 href="/customer/booking/airport-transfer"
