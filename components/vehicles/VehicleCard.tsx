@@ -6,6 +6,7 @@ interface VehicleCardProps {
   image: string;
   passengers: number;
   luggage: number;
+  category: string;
   href: string;
 }
 
@@ -14,10 +15,27 @@ export default function VehicleCard({
   image,
   passengers,
   luggage,
+  category,
   href,
 }: VehicleCardProps) {
   return (
-    <div className="overflow-hidden rounded-xl border border-[var(--border-light)] bg-white">
+    <div
+      className="
+        group
+        overflow-hidden
+        rounded-xl
+        border
+        border-[var(--border-light)]
+        bg-white/95
+        p-0
+        transition-[transform,box-shadow,background-color]
+        duration-700
+        ease-[cubic-bezier(0.22,1,0.36,1)]
+        hover:-translate-y-2
+        hover:bg-white
+        hover:shadow-[0_22px_50px_rgba(0,0,0,0.22)]
+      "
+    >
       {/* Vehicle image */}
       <div className="relative h-[220px] w-full">
         <Image
@@ -26,6 +44,27 @@ export default function VehicleCard({
           fill
           className="object-cover"
         />
+
+        {/* Category badge */}
+        <span
+          className="
+            absolute
+            left-4
+            top-4
+            rounded-full
+            bg-[#FFD34E]
+            px-3
+            py-1.5
+            text-[10px]
+            font-bold
+            uppercase
+            tracking-[0.12em]
+            text-[var(--green-dark)]
+            shadow-sm
+          "
+        >
+          {category}
+        </span>
       </div>
 
       {/* Vehicle information */}
