@@ -206,3 +206,58 @@ small {
 ::-webkit-scrollbar-thumb:hover {
   background: #8ea491;
 }
+
+/*
+   SERVICE COLOUR DASH ANIMATION
+*/
+
+@keyframes dashGreen {
+  0% {
+    opacity: 0;
+    transform: translateX(-18px) scaleX(0.6);
+  }
+
+  60% {
+    opacity: 1;
+    transform: translateX(4px) scaleX(1.08);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0) scaleX(1);
+  }
+}
+
+@keyframes dashYellow {
+  0% {
+    opacity: 0;
+    transform: translateX(-12px) scaleX(0.6);
+  }
+
+  60% {
+    opacity: 1;
+    transform: translateX(3px) scaleX(1.05);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0) scaleX(1);
+  }
+}
+
+@keyframes dashBlue {
+  0% {
+    opacity: 0;
+    transform: translateX(-8px) scaleX(0.6);
+  }
+
+  60% {
+    opacity: 1;
+    transform: translateX(2px) scaleX(1.05);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0) scaleX(1);
+  }
+}

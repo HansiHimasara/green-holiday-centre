@@ -97,18 +97,6 @@ export default function ServiceTabs({
               />
             )}
 
-            {/* Inner highlight */}
-            {isActive && (
-              <span
-                className="
-                  pointer-events-none
-                  absolute inset-x-2 top-1
-                  h-px
-                  bg-white/20
-                "
-              />
-            )}
-
             <span className="relative z-10">
               {tab.label}
             </span>
