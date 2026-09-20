@@ -59,10 +59,7 @@ export default function VehiclesPage() {
             />
 
             {/* Small visual accent */}
-            <div className="mx-auto mt-7 flex w-fit items-center gap-2">
-              <span className="h-1.5 w-10 rounded-full bg-[var(--green-primary)]" />
-              <span className="h-1.5 w-5 rounded-full bg-[#FFD34E]" />
-              <span className="h-1.5 w-3 rounded-full bg-[#5B8DB8]" />
+            <div className="mx-auto mt-2 flex w-fit items-center gap-0">
             </div>
           </div>
         </section>
