@@ -1,0 +1,258 @@
+// use prisma-8
+
+enum UserRole {
+  @@type("pg/text@1")
+
+  ADMIN       = "ADMIN"
+  SUPER_ADMIN = "SUPER_ADMIN"
+}
+
+enum VehicleStatus {
+  @@type("pg/text@1")
+
+  ACTIVE   = "ACTIVE"
+  INACTIVE = "INACTIVE"
+}
+
+enum ServiceType {
+  @@type("pg/text@1")
+
+  AIRPORT_TRANSFER = "AIRPORT_TRANSFER"
+  DAY_TOUR         = "DAY_TOUR"
+  ROUND_TOUR       = "ROUND_TOUR"
+}
+
+enum BookingStatus {
+  @@type("pg/text@1")
+
+  PENDING   = "PENDING"
+  CONFIRMED = "CONFIRMED"
+  CANCELLED = "CANCELLED"
+  COMPLETED = "COMPLETED"
+}
+
+enum PaymentStatus {
+  @@type("pg/text@1")
+
+  UNPAID   = "UNPAID"
+  PENDING  = "PENDING"
+  PAID     = "PAID"
+  FAILED   = "FAILED"
+  REFUNDED = "REFUNDED"
+}
+
+enum FeedbackVisibility {
+  @@type("pg/text@1")
+
+  VISIBLE = "VISIBLE"
+  HIDDEN  = "HIDDEN"
+}
+
+enum ContactStatus {
+  @@type("pg/text@1")
+
+  NEW     = "NEW"
+  READ    = "READ"
+  REPLIED = "REPLIED"
+}
+
+
+// ADMIN & SUPER ADMIN LOGIN
+
+
+model User {
+  id              Int      @id @default(autoincrement())
+  fullName        String
+  email           String   @unique
+  passwordHash    String
+  phone           String?
+  role            UserRole @default(ADMIN)
+  profileImageUrl String?
+
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+}
+
+
+// CUSTOMERS
+// Customers do NOT login
+
+model Customer {
+  id                  Int    @id @default(autoincrement())
+  fullName            String
+  email               String @unique
+  phone               String
+  passportNumber      String?
+  nationality         String?
+  address             String?
+  specialRequirements String?
+
+  bookings  Booking[]
+  feedbacks Feedback[]
+
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+}
+
+
+// VEHICLE TYPES
+// No stock / sold-out tracking
+
+model VehicleType {
+  id                Int           @id @default(autoincrement())
+  name              String        @unique
+  description       String?
+  passengerCapacity Int
+  luggageCapacity   Int
+  imageUrl          String?
+  status            VehicleStatus @default(ACTIVE)
+
+  bookings Booking[]
+
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+}
+
+
+// BOOKINGS
+
+
+model Booking {
+  id               Int           @id @default(autoincrement())
+  bookingReference String        @unique
+
+  customerId       Int
+  vehicleTypeId    Int
+  serviceType      ServiceType
+
+  travelDate       DateString?
+  returnDate       DateString?
+
+  passengerCount   Int
+  luggageCount     Int           @default(0)
+  numberOfNights   Int?
+
+  pickupLocation   String?
+  dropoffLocation  String?
+  flightNumber     String?
+  specialRequests  String?
+
+  totalAmount      Decimal
+  currency         String        @default("USD")
+
+  status           BookingStatus @default(PENDING)
+  paymentStatus    PaymentStatus @default(UNPAID)
+
+  customer    Customer    @relation(fields: [customerId], references: [id])
+  vehicleType VehicleType @relation(fields: [vehicleTypeId], references: [id])
+
+  destinations BookingDestination[]
+  payments     Payment[]
+  feedback     Feedback?
+
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+}
+
+
+// ROUND TOUR DESTINATIONS
+
+
+model BookingDestination {
+  id          Int    @id @default(autoincrement())
+  bookingId   Int
+  nightNumber Int
+  destination String
+
+  booking Booking @relation(
+    fields: [bookingId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  @@unique([bookingId, nightNumber])
+}
+
+
+// PRICING / MILEAGE
+
+
+model Pricing {
+  id                   Int     @id @default(autoincrement())
+  fromLocation         String
+  toLocation           String
+  kilometres           Decimal
+  extraKilometreCharge Decimal
+  active               Boolean @default(true)
+
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+}
+
+
+// PAYMENTS
+// Do NOT store card number or CVV
+
+
+model Payment {
+  id                   Int           @id @default(autoincrement())
+  bookingId            Int
+
+  transactionReference String?       @unique
+  amount               Decimal
+  currency             String        @default("USD")
+  paymentMethod        String?
+  status               PaymentStatus @default(PENDING)
+  paidAt               TimestamptzString?
+
+  booking Booking @relation(
+    fields: [bookingId],
+    references: [id]
+  )
+
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+}
+
+
+// CUSTOMER FEEDBACK
+
+
+model Feedback {
+  id         Int                @id @default(autoincrement())
+  customerId Int
+  bookingId  Int                @unique
+
+  rating     Int
+  message    String
+  visibility FeedbackVisibility @default(VISIBLE)
+
+  customer Customer @relation(
+    fields: [customerId],
+    references: [id]
+  )
+
+  booking Booking @relation(
+    fields: [bookingId],
+    references: [id]
+  )
+
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+}
+
+
+// CONTACT US MESSAGES
+
+
+model ContactMessage {
+  id      Int           @id @default(autoincrement())
+  name    String
+  email   String
+  phone   String?
+  message String
+  status  ContactStatus @default(NEW)
+
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+}
