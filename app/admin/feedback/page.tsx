@@ -213,52 +213,55 @@ export default function AdminFeedbackPage() {
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row">
-          {/* Rating Filter */}
+          {/* Rating Filter - FILTER FONT STYLE */}
           <div className="relative">
             <select
               value={ratingFilter}
               onChange={(event) =>
                 setRatingFilter(event.target.value)
               }
+              
               className="
+                inline-flex
                 h-9
-                min-w-[150px]
                 appearance-none
+                items-center
+
                 rounded-lg
                 border
                 border-[var(--green-primary)]/20
                 bg-white
-                px-4
-                pr-9
-                text-[10px]
-                font-extrabold
-                uppercase
-                tracking-[0.08em]
-                text-[var(--green-dark)]
-                outline-none
+                px-10
+                text-left
+                text-[11px]
+                font-semibold
+                text-black
                 transition-colors
                 duration-200
-                focus:border-[var(--green-primary)]
-                focus:ring-2
-                focus:ring-[var(--green-primary)]/10
+                hover:border-[var(--green-primary)]
+                hover:bg-[var(--surface-soft)]
               "
-              aria-label="Filter by rating"
             >
               <option value="all">
                 All Ratings
               </option>
+
               <option value="5">
                 5 Stars
               </option>
+
               <option value="4">
                 4 Stars
               </option>
+
               <option value="3">
                 3 Stars
               </option>
+
               <option value="2">
                 2 Stars
               </option>
+
               <option value="1">
                 1 Star
               </option>
@@ -269,7 +272,7 @@ export default function AdminFeedbackPage() {
             </span>
           </div>
 
-          {/* Add Feedback */}
+          {/* Add Feedback - GREEN BUTTON FONT STYLE */}
           <button
             type="button"
             onClick={handleAddFeedback}
@@ -432,15 +435,19 @@ export default function AdminFeedbackPage() {
                               <option value={5}>
                                 5 Stars
                               </option>
+
                               <option value={4}>
                                 4 Stars
                               </option>
+
                               <option value={3}>
                                 3 Stars
                               </option>
+
                               <option value={2}>
                                 2 Stars
                               </option>
+
                               <option value={1}>
                                 1 Star
                               </option>
@@ -528,6 +535,7 @@ export default function AdminFeedbackPage() {
                               <option value="visible">
                                 Visible
                               </option>
+
                               <option value="hidden">
                                 Hidden
                               </option>
@@ -549,6 +557,7 @@ export default function AdminFeedbackPage() {
                         <div className="flex items-center justify-center gap-2">
                           {isEditing ? (
                             <>
+                              {/* Save - GREEN BUTTON FONT STYLE */}
                               <button
                                 type="button"
                                 onClick={handleSave}
@@ -573,6 +582,7 @@ export default function AdminFeedbackPage() {
                                 Save
                               </button>
 
+                              {/* Cancel - WHITE BUTTON / FILTER FONT STYLE */}
                               <button
                                 type="button"
                                 onClick={handleCancel}
@@ -586,10 +596,8 @@ export default function AdminFeedbackPage() {
                                   border-[var(--border)]
                                   bg-white
                                   px-4
-                                  text-[10px]
-                                  font-extrabold
-                                  uppercase
-                                  tracking-[0.08em]
+                                  text-[11px]
+                                  font-semibold
                                   text-[var(--text-secondary)]
                                   transition-colors
                                   duration-200
@@ -603,6 +611,7 @@ export default function AdminFeedbackPage() {
                             </>
                           ) : (
                             <>
+                              {/* Edit */}
                               <button
                                 type="button"
                                 onClick={() =>
@@ -630,6 +639,7 @@ export default function AdminFeedbackPage() {
                                 <EditIcon />
                               </button>
 
+                              {/* Delete */}
                               <button
                                 type="button"
                                 onClick={() =>
