@@ -41,9 +41,11 @@ export default function VehicleFilters() {
         <div className="rounded-2xl border border-white/15 bg-white/10 p-5 backdrop-blur-sm md:p-6">
           <div className="flex flex-wrap items-end gap-5">
             {/* Vehicle type */}
-            <div className="min-w-[200px] flex-1">
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-white">
+                Vehicle Type
+              </label>
               <Select
-                label="Vehicle Type"
                 placeholder="All Categories"
                 options={[
                   { label: "Sedan", value: "sedan" },
@@ -55,9 +57,11 @@ export default function VehicleFilters() {
             </div>
 
             {/* Passenger count */}
-            <div className="min-w-[200px] flex-1">
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-white">
+                Passengers
+              </label>
               <Select
-                label="Passengers"
                 placeholder="Any Passenger Count"
                 options={[
                   { label: "1 - 4", value: "1-4" },
@@ -68,9 +72,11 @@ export default function VehicleFilters() {
             </div>
 
             {/* Luggage capacity */}
-            <div className="min-w-[200px] flex-1">
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-white">
+                Luggage
+              </label>
               <Select
-                label="Luggage"
                 placeholder="Any Luggage Capacity"
                 options={[
                   {

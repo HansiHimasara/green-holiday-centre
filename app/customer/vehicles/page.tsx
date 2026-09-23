@@ -58,11 +58,11 @@ export default function VehiclesPage() {
               description="Explore our selection of reliable and comfortable vehicles designed for private journeys across Sri Lanka."
             />
 
-            {/* Small visual accent */}
+            {/* Equal Colour Dashes */}
             <div className="mx-auto mt-7 flex w-fit items-center gap-2">
-              <span className="h-1.5 w-10 rounded-full bg-[var(--green-primary)]" />
-              <span className="h-1.5 w-5 rounded-full bg-[#FFD34E]" />
-              <span className="h-1.5 w-3 rounded-full bg-[#5B8DB8]" />
+              <span className="h-1.5 w-6 rounded-full bg-[var(--green-primary)]" />
+              <span className="h-1.5 w-6 rounded-full bg-[var(--yellow-golden)]" />
+              <span className="h-1.5 w-6 rounded-full bg-[var(--sky-blue)]" />
             </div>
           </div>
         </section>

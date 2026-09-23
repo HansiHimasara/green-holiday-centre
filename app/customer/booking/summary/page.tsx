@@ -55,7 +55,6 @@ export default function BookingSummaryPage() {
           TOP WHITE AREA
       ========================================== */}
       <section className="relative overflow-hidden bg-white">
-
         <div className="relative z-10">
           {/* Service Tabs */}
           <div className="mx-auto w-full max-w-[1280px] px-6 pt-7 md:px-10">
@@ -79,7 +78,6 @@ export default function BookingSummaryPage() {
           SUMMARY AREA
       ========================================== */}
       <section className="relative overflow-hidden bg-[#F8F7F1] py-10">
-
         <div className="relative z-10 mx-auto w-full max-w-[1280px] px-6 md:px-10">
           {/* ==========================================
               MAIN SUMMARY CARD
@@ -120,7 +118,7 @@ export default function BookingSummaryPage() {
                 <span className="h-1.5 w-8 rounded-full bg-[var(--sky-blue)]" />
               </div>
             </div>
-            
+
             {/* ==========================================
                 SUMMARY DETAILS
             ========================================== */}
@@ -248,7 +246,7 @@ export default function BookingSummaryPage() {
               {/* ==========================================
                   BUTTONS
               ========================================== */}
-              <div className="mt-7 flex items-center justify-between">
+              <div className="mt-7 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <Button
                   href="/customer/booking/customer-details"
                   variant="outline"
@@ -257,12 +255,21 @@ export default function BookingSummaryPage() {
                   Back
                 </Button>
 
-                <Button
-                  href="/customer/booking/payment"
-                  className="min-w-[180px]"
-                >
-                  Proceed to Payment
-                </Button>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <Button
+                    variant="outline"
+                    className="min-w-[180px]"
+                  >
+                    Make a Reservation
+                  </Button>
+
+                  <Button
+                    href="/customer/booking/payment"
+                    className="min-w-[180px]"
+                  >
+                    Proceed to Payment
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
