@@ -198,10 +198,7 @@ export default function AdminCustomersPage() {
       customer.contact,
     ]);
 
-    const csvContent = [
-      headers,
-      ...rows,
-    ]
+    const csvContent = [headers, ...rows]
       .map((row) =>
         row
           .map((value) =>
@@ -250,6 +247,7 @@ export default function AdminCustomersPage() {
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row">
+          {/* Export CSV - FILTER FONT STYLE */}
           <button
             type="button"
             onClick={handleExportCSV}
@@ -263,11 +261,9 @@ export default function AdminCustomersPage() {
               border-[var(--green-primary)]/20
               bg-white
               px-5
-              text-[10px]
-              font-extrabold
-              uppercase
-              tracking-[0.08em]
-              text-[var(--green-dark)]
+              text-[11px]
+              font-semibold
+              text-black
               transition-colors
               duration-200
               hover:border-[var(--green-primary)]
@@ -277,6 +273,7 @@ export default function AdminCustomersPage() {
             Export CSV
           </button>
 
+          {/* Add Customer - PREVIOUS GREEN BUTTON STYLE */}
           <button
             type="button"
             onClick={handleAddCustomer}
@@ -409,9 +406,7 @@ export default function AdminCustomersPage() {
                         editingCustomer ? (
                           <input
                             type="text"
-                            value={
-                              editingCustomer.passport
-                            }
+                            value={editingCustomer.passport}
                             onChange={(event) =>
                               updateEditingField(
                                 "passport",
@@ -482,9 +477,7 @@ export default function AdminCustomersPage() {
                         editingCustomer ? (
                           <input
                             type="text"
-                            value={
-                              editingCustomer.contact
-                            }
+                            value={editingCustomer.contact}
                             onChange={(event) =>
                               updateEditingField(
                                 "contact",
