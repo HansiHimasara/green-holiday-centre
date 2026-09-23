@@ -133,7 +133,7 @@ export default function HomePage() {
                     BEGIN YOUR JOURNEY
                 ===================================================== */}
                 <Link
-                  href="/customer/vehicles"
+                  href="/customer/booking"
                   className="
                     group
                     relative
@@ -635,7 +635,7 @@ export default function HomePage() {
                 {/* CTA */}
                 <div className="mt-9 flex justify-center">
                   <Link
-                    href="/customer/vehicles"
+                    href="/customer/booking"
                     className="
                       group
                       inline-flex
