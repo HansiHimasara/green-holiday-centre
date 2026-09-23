@@ -1,33 +1,68 @@
+"use client";
+
+import Link from "next/link";
+import { useMemo, useState } from "react";
+
 import AdminPageLayout from "@/components/admin/AdminPageLayout";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import AdminTable from "@/components/admin/AdminTable";
 import AdminStatusBadge from "@/components/admin/AdminStatusBadge";
 
-const bookings = [
+type BookingStatus = "confirmed" | "pending" | "cancelled";
+
+type Booking = {
+  id: string;
+  customer: string;
+  date: string;
+  vehicle: string;
+  status: BookingStatus;
+};
+
+const initialBookings: Booking[] = [
   {
     id: "GH-2026-1021",
     customer: "Kasun Silva",
     date: "Jun 21, 2026",
     vehicle: "Toyota Prius",
-    status: "confirmed" as const,
+    status: "confirmed",
   },
   {
     id: "GH-2026-1022",
     customer: "Dinithi Perera",
     date: "Jun 21, 2026",
     vehicle: "Suzuki Wagon R",
-    status: "pending" as const,
+    status: "pending",
   },
   {
     id: "GH-2026-1023",
     customer: "Nimal Fernando",
     date: "Jun 20, 2026",
     vehicle: "Toyota Hiace",
-    status: "cancelled" as const,
+    status: "cancelled",
   },
 ];
 
 export default function AdminDashboardPage() {
+  const [bookings] = useState<Booking[]>(initialBookings);
+
+  const stats = useMemo(() => {
+    const pendingBookings = bookings.filter(
+      (booking) => booking.status === "pending",
+    ).length;
+
+    const completedTrips = bookings.filter(
+      (booking) => booking.status === "confirmed",
+    ).length;
+
+    return {
+      customers: 1284,
+      customersThisMonth: 12,
+      pendingBookings,
+      completedTrips: 984,
+      completedThisMonth: 18,
+    };
+  }, [bookings]);
+
   return (
     <AdminPageLayout sectionTitle="Dashboard Overview">
       {/* ==========================================
@@ -53,12 +88,12 @@ export default function AdminDashboardPage() {
               </p>
 
               <p className="mt-2 font-serif text-[30px] font-semibold leading-none text-[var(--green-dark)]">
-                1,284
+                {stats.customers.toLocaleString()}
               </p>
               <br></br>
 
-              <p className="mt-2 text-[11px] font-semibold text-[var(--green-primary)]">
-                +12 this month
+              <p className="mt-3 text-[11px] font-semibold text-[var(--green-primary)]">
+                +{stats.customersThisMonth} this month
               </p>
             </div>
 
@@ -79,11 +114,11 @@ export default function AdminDashboardPage() {
               </p>
 
               <p className="mt-2 font-serif text-[30px] font-semibold leading-none text-[var(--green-dark)]">
-                42
+                {stats.pendingBookings}
               </p>
               <br></br>
 
-              <p className="mt-2 text-[11px] font-semibold text-[var(--gold-mustard)]">
+              <p className="mt-3 text-[11px] font-semibold text-[var(--gold-mustard)]">
                 Require attention
               </p>
             </div>
@@ -105,12 +140,12 @@ export default function AdminDashboardPage() {
               </p>
 
               <p className="mt-2 font-serif text-[30px] font-semibold leading-none text-[var(--green-dark)]">
-                984
+                {stats.completedTrips.toLocaleString()}
               </p>
               <br></br>
 
-              <p className="mt-2 text-[11px] font-semibold text-[var(--sky-blue)]">
-                +18 this month
+              <p className="mt-3 text-[11px] font-semibold text-[var(--sky-blue)]">
+                +{stats.completedThisMonth} this month
               </p>
             </div>
 
@@ -137,12 +172,14 @@ export default function AdminDashboardPage() {
             </h2>
           </div>
 
-          <button
-            type="button"
+          <Link
+            href="/admin/bookings"
             className="
               w-fit
-              text-[12px]
-              font-bold
+              text-[10px]
+              font-extrabold
+              uppercase
+              tracking-[0.08em]
               text-[var(--green-primary)]
               transition-colors
               duration-200
@@ -150,7 +187,7 @@ export default function AdminDashboardPage() {
             "
           >
             View All Bookings →
-          </button>
+          </Link>
         </div>
 
         {/* Table */}
@@ -181,39 +218,51 @@ export default function AdminDashboardPage() {
             </thead>
 
             <tbody>
-              {bookings.map((booking) => (
-                <tr
-                  key={booking.id}
-                  className="
-                    border-b
-                    border-[var(--border-light)]
-                    last:border-0
-                    transition-colors
-                    duration-200
-                    hover:bg-[var(--surface-soft)]
-                  "
-                >
-                  <td className="px-5 py-4 text-[12px] font-bold text-[var(--green-dark)]">
-                    {booking.id}
-                  </td>
+              {bookings.length > 0 ? (
+                bookings.map((booking) => (
+                  <tr
+                    key={booking.id}
+                    className="
+                      border-b
+                      border-[var(--border-light)]
+                      last:border-0
+                      transition-colors
+                      duration-200
+                      hover:bg-[var(--surface-soft)]
+                    "
+                  >
+                    <td className="px-5 py-4 text-[12px] font-bold text-[var(--green-dark)]">
+                      {booking.id}
+                    </td>
 
-                  <td className="px-5 py-4 text-[13px] font-medium text-[var(--text-primary)]">
-                    {booking.customer}
-                  </td>
+                    <td className="px-5 py-4 text-[13px] font-medium text-[var(--text-primary)]">
+                      {booking.customer}
+                    </td>
 
-                  <td className="px-5 py-4 text-[12px] text-[var(--text-secondary)]">
-                    {booking.date}
-                  </td>
+                    <td className="px-5 py-4 text-[12px] text-[var(--text-secondary)]">
+                      {booking.date}
+                    </td>
 
-                  <td className="px-5 py-4 text-[12px] text-[var(--text-secondary)]">
-                    {booking.vehicle}
-                  </td>
+                    <td className="px-5 py-4 text-[12px] text-[var(--text-secondary)]">
+                      {booking.vehicle}
+                    </td>
 
-                  <td className="px-5 py-4">
-                    <AdminStatusBadge status={booking.status} />
+                    <td className="px-5 py-4">
+                      {/* Keep the existing status colors */}
+                      <AdminStatusBadge status={booking.status} />
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-5 py-10 text-center text-[12px] text-[var(--text-muted)]"
+                  >
+                    No recent bookings available.
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </AdminTable>
         </div>
