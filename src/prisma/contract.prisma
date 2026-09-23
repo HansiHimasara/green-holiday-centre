@@ -1,10 +1,21 @@
 // use prisma-8
 
+// ======================================================
+// ENUMS
+// ======================================================
+
 enum UserRole {
   @@type("pg/text@1")
 
   ADMIN       = "ADMIN"
   SUPER_ADMIN = "SUPER_ADMIN"
+}
+
+enum UserStatus {
+  @@type("pg/text@1")
+
+  ACTIVE   = "ACTIVE"
+  DISABLED = "DISABLED"
 }
 
 enum VehicleStatus {
@@ -57,75 +68,154 @@ enum ContactStatus {
 }
 
 
-// ADMIN & SUPER ADMIN LOGIN
-
+// ======================================================
+// ADMIN / SUPER ADMIN
+// Customer login ekak naha
+// ======================================================
 
 model User {
-  id              Int      @id @default(autoincrement())
+  id              Int        @id @default(autoincrement())
+
   fullName        String
-  email           String   @unique
+  username        String?    @unique
+  email           String     @unique
   passwordHash    String
   phone           String?
-  role            UserRole @default(ADMIN)
-  profileImageUrl String?
 
-  createdAt TimestamptzString @default(now())
-  updatedAt temporal.updatedAtString()
+  role            UserRole   @default(ADMIN)
+  status          UserStatus @default(ACTIVE)
+
+  profileImageUrl String?
+  lastLoginAt     TimestamptzString?
+
+  sessions        Session[]
+  resetTokens     PasswordResetToken[]
+
+  createdAt       TimestamptzString @default(now())
+  updatedAt       temporal.updatedAtString()
 }
 
 
+// ======================================================
+// LOGIN SESSION
+// Browser cookie token eke hash eka witharai DB eke thiyenne
+// ======================================================
+
+model Session {
+  id        Int    @id @default(autoincrement())
+  userId    Int
+
+  tokenHash String @unique
+  expiresAt TimestamptzString
+
+  user User @relation(
+    fields: [userId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  createdAt TimestamptzString @default(now())
+}
+
+
+// ======================================================
+// FORGOT PASSWORD
+// ======================================================
+
+model PasswordResetToken {
+  id        Int    @id @default(autoincrement())
+  userId    Int
+
+  tokenHash String @unique
+  expiresAt TimestamptzString
+  usedAt    TimestamptzString?
+
+  user User @relation(
+    fields: [userId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  createdAt TimestamptzString @default(now())
+}
+
+
+// ======================================================
 // CUSTOMERS
-// Customers do NOT login
+// Customer account/login ekak naha
+// ======================================================
 
 model Customer {
   id                  Int    @id @default(autoincrement())
+
   fullName            String
   email               String @unique
   phone               String
+
   passportNumber      String?
   nationality         String?
   address             String?
   specialRequirements String?
 
-  bookings  Booking[]
-  feedbacks Feedback[]
+  bookings            Booking[]
+  feedbacks           Feedback[]
 
-  createdAt TimestamptzString @default(now())
-  updatedAt temporal.updatedAtString()
+  createdAt           TimestamptzString @default(now())
+  updatedAt           temporal.updatedAtString()
 }
 
 
+// ======================================================
 // VEHICLE TYPES
-// No stock / sold-out tracking
+//
+// Me project eke actual individual vehicles stock track
+// karanne naha. Vehicle class/type witharai.
+// ======================================================
 
 model VehicleType {
-  id                Int           @id @default(autoincrement())
-  name              String        @unique
-  description       String?
-  passengerCapacity Int
-  luggageCapacity   Int
-  imageUrl          String?
-  status            VehicleStatus @default(ACTIVE)
+  id                  Int           @id @default(autoincrement())
 
-  bookings Booking[]
+  name                String        @unique
+  description         String?
 
-  createdAt TimestamptzString @default(now())
-  updatedAt temporal.updatedAtString()
+  passengerCapacity   Int
+  luggageCapacity     Int
+
+  transmission        String?
+  fuelType            String?
+  airConditioning     Boolean       @default(true)
+  chauffeurIncluded   Boolean       @default(true)
+  chauffeurLanguage   String?
+
+  imageUrl            String?
+
+  status              VehicleStatus @default(ACTIVE)
+
+  bookings            Booking[]
+
+  createdAt           TimestamptzString @default(now())
+  updatedAt           temporal.updatedAtString()
 }
 
 
+// ======================================================
 // BOOKINGS
-
+//
+// AIRPORT_TRANSFER / DAY_TOUR / ROUND_TOUR
+// තුනම එකම table එකෙන්.
+// ======================================================
 
 model Booking {
   id               Int           @id @default(autoincrement())
+
   bookingReference String        @unique
 
   customerId       Int
   vehicleTypeId    Int
+
   serviceType      ServiceType
 
-  travelDate       DateString?
+  travelDate       DateString
   returnDate       DateString?
 
   passengerCount   Int
@@ -143,8 +233,15 @@ model Booking {
   status           BookingStatus @default(PENDING)
   paymentStatus    PaymentStatus @default(UNPAID)
 
-  customer    Customer    @relation(fields: [customerId], references: [id])
-  vehicleType VehicleType @relation(fields: [vehicleTypeId], references: [id])
+  customer Customer @relation(
+    fields: [customerId],
+    references: [id]
+  )
+
+  vehicleType VehicleType @relation(
+    fields: [vehicleTypeId],
+    references: [id]
+  )
 
   destinations BookingDestination[]
   payments     Payment[]
@@ -155,11 +252,13 @@ model Booking {
 }
 
 
-// ROUND TOUR DESTINATIONS
-
+// ======================================================
+// ROUND TOUR NIGHT-BY-NIGHT DESTINATIONS
+// ======================================================
 
 model BookingDestination {
   id          Int    @id @default(autoincrement())
+
   bookingId   Int
   nightNumber Int
   destination String
@@ -174,37 +273,50 @@ model BookingDestination {
 }
 
 
+// ======================================================
 // PRICING / MILEAGE
-
+//
+// Admin "Our Mileages" page ekata.
+// ======================================================
 
 model Pricing {
   id                   Int     @id @default(autoincrement())
+
   fromLocation         String
   toLocation           String
+
   kilometres           Decimal
   extraKilometreCharge Decimal
+
   active               Boolean @default(true)
 
-  createdAt TimestamptzString @default(now())
-  updatedAt temporal.updatedAtString()
+  createdAt            TimestamptzString @default(now())
+  updatedAt            temporal.updatedAtString()
 }
 
 
-// PAYMENTS
-// Do NOT store card number or CVV
-
+// ======================================================
+// PAYMENT
+//
+// IMPORTANT:
+// Card number / expiry / CVV database eke store karanne naha.
+// ======================================================
 
 model Payment {
   id                   Int           @id @default(autoincrement())
+
   bookingId            Int
 
   transactionReference String?       @unique
   amount               Decimal
   currency             String        @default("USD")
+
   paymentMethod        String?
   status               PaymentStatus @default(PENDING)
   paidAt               TimestamptzString?
 
+  // Existing DB foreign key behavior eka change nokara thiyenawa.
+  // E nisa migration planner issue eka enne naha.
   booking Booking @relation(
     fields: [bookingId],
     references: [id]
@@ -215,24 +327,33 @@ model Payment {
 }
 
 
-// CUSTOMER FEEDBACK
-
+// ======================================================
+// FEEDBACK
+//
+// Frontend eke Booking Reference "Optional" nisa
+// customerId / bookingId optional.
+// ======================================================
 
 model Feedback {
   id         Int                @id @default(autoincrement())
-  customerId Int
-  bookingId  Int                @unique
+
+  customerId Int?
+  bookingId  Int?               @unique
+
+  fullName   String
+  email      String?
 
   rating     Int
   message    String
+
   visibility FeedbackVisibility @default(VISIBLE)
 
-  customer Customer @relation(
+  customer Customer? @relation(
     fields: [customerId],
     references: [id]
   )
 
-  booking Booking @relation(
+  booking Booking? @relation(
     fields: [bookingId],
     references: [id]
   )
@@ -242,16 +363,22 @@ model Feedback {
 }
 
 
-// CONTACT US MESSAGES
-
+// ======================================================
+// CONTACT US
+// ======================================================
 
 model ContactMessage {
-  id      Int           @id @default(autoincrement())
-  name    String
-  email   String
-  phone   String?
-  message String
-  status  ContactStatus @default(NEW)
+  id        Int           @id @default(autoincrement())
+
+  name      String
+  email     String
+  phone     String?
+  message   String
+
+  status    ContactStatus @default(NEW)
+
+  readAt    TimestamptzString?
+  repliedAt TimestamptzString?
 
   createdAt TimestamptzString @default(now())
   updatedAt temporal.updatedAtString()
