@@ -1,9 +1,24 @@
+"use client";
+
+import { useState } from "react";
+
 import AdminPageLayout from "@/components/admin/AdminPageLayout";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
-import AdminActionButton from "@/components/admin/AdminActionButton";
 import AdminTable from "@/components/admin/AdminTable";
 
-const reports = [
+type ReportType =
+  | "performance"
+  | "booking"
+  | "revenue";
+
+type Report = {
+  name: string;
+  current: string;
+  previous: string;
+  variance: string;
+};
+
+const performanceReports: Report[] = [
   {
     name: "Total Bookings Completed",
     current: "1,128 trips",
@@ -24,7 +39,88 @@ const reports = [
   },
 ];
 
+const bookingReports: Report[] = [
+  {
+    name: "Total Bookings",
+    current: "1,245 bookings",
+    previous: "1,083 bookings",
+    variance: "+15.0% Increased",
+  },
+  {
+    name: "Completed Bookings",
+    current: "1,128 bookings",
+    previous: "982 bookings",
+    variance: "+14.9% Increased",
+  },
+  {
+    name: "Cancelled Bookings",
+    current: "117 bookings",
+    previous: "101 bookings",
+    variance: "+15.8% Increased",
+  },
+];
+
+const revenueReports: Report[] = [
+  {
+    name: "Total Revenue",
+    current: "Rs. 8,450,000",
+    previous: "Rs. 7,820,000",
+    variance: "+8.1% Increased",
+  },
+  {
+    name: "Average Booking Value",
+    current: "Rs. 7,490",
+    previous: "Rs. 7,180",
+    variance: "+4.3% Increased",
+  },
+  {
+    name: "Pending Payments",
+    current: "Rs. 425,000",
+    previous: "Rs. 380,000",
+    variance: "+11.8% Increased",
+  },
+];
+
 export default function AdminReportsPage() {
+  const [reportType, setReportType] =
+    useState<ReportType>("performance");
+
+  const [period, setPeriod] =
+    useState("august");
+
+  const [generatedReports, setGeneratedReports] =
+    useState<Report[]>(performanceReports);
+
+  const [generatedPeriod, setGeneratedPeriod] =
+    useState("August 2026");
+
+  const handleGenerateReport = () => {
+    let reports: Report[] = [];
+
+    if (reportType === "booking") {
+      reports = bookingReports;
+    } else if (reportType === "revenue") {
+      reports = revenueReports;
+    } else {
+      reports = performanceReports;
+    }
+
+    const periodNames: Record<string, string> = {
+      august: "August 2026",
+      july: "July 2026",
+      june: "June 2026",
+    };
+
+    setGeneratedReports(reports);
+    setGeneratedPeriod(
+      periodNames[period] ?? "August 2026",
+    );
+  };
+
+  const handleDownloadPDF = () => {
+    window.print();
+  };
+
   return (
     <AdminPageLayout sectionTitle="Performance Reports">
       {/* ==========================================
@@ -50,7 +146,14 @@ export default function AdminReportsPage() {
         </div>
 
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          {/* Report Type */}
           <select
+            value={reportType}
+            onChange={(event) =>
+              setReportType(
+                event.target.value as ReportType,
+              )
+            }
             className="
               h-[44px]
               w-full
@@ -68,20 +171,26 @@ export default function AdminReportsPage() {
               focus:border-[var(--green-primary)]
               lg:flex-1
             "
-            defaultValue="performance"
           >
             <option value="performance">
               Report Type: Performance Summary
             </option>
+
             <option value="booking">
               Booking Summary
             </option>
+
             <option value="revenue">
               Revenue Summary
             </option>
           </select>
 
+          {/* Period */}
           <select
+            value={period}
+            onChange={(event) =>
+              setPeriod(event.target.value)
+            }
             className="
               h-[44px]
               w-full
@@ -99,23 +208,54 @@ export default function AdminReportsPage() {
               focus:border-[var(--green-primary)]
               lg:flex-1
             "
-            defaultValue="august"
           >
-            <option value="august">From: August 2026</option>
-            <option value="july">July 2026</option>
-            <option value="june">June 2026</option>
+            <option value="august">
+              From: August 2026
+            </option>
+
+            <option value="july">
+              From: July 2026
+            </option>
+
+            <option value="june">
+              From: June 2026
+            </option>
           </select>
 
-          <AdminActionButton variant="primary">
+          {/* Generate */}
+          <button
+            type="button"
+            onClick={handleGenerateReport}
+            className="
+              inline-flex
+              h-[44px]
+              items-center
+              justify-center
+              rounded-lg
+              bg-[var(--green-dark)]
+              px-6
+              text-[10px]
+              font-extrabold
+              uppercase
+              tracking-[0.08em]
+              !text-white
+              transition-colors
+              duration-200
+              hover:bg-[var(--green-primary)]
+            "
+          >
             Generate Report
-          </AdminActionButton>
+          </button>
         </div>
       </div>
 
       {/* ==========================================
           PERFORMANCE TABLE
       ========================================== */}
-      <div className="mt-6 overflow-hidden rounded-xl border border-[var(--border-light)] bg-white shadow-[0_10px_30px_rgba(7,91,69,0.05)]">
+      <div
+        id="report-content"
+        className="mt-6 overflow-hidden rounded-xl border border-[var(--border-light)] bg-white shadow-[0_10px_30px_rgba(7,91,69,0.05)]"
+      >
         {/* Top accent */}
         <div className="flex h-1.5 w-full">
           <span className="flex-1 bg-[var(--green-primary)]" />
@@ -129,9 +269,15 @@ export default function AdminReportsPage() {
             Performance
           </p>
 
-          <h2 className="mt-1 font-serif text-[21px] font-semibold text-[var(--green-dark)]">
-            Business Performance Overview
-          </h2>
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="font-serif text-[21px] font-semibold text-[var(--green-dark)]">
+              Business Performance Overview
+            </h2>
+
+            <span className="text-[11px] font-semibold text-[var(--text-muted)]">
+              {generatedPeriod}
+            </span>
+          </div>
         </div>
 
         {/* Table */}
@@ -139,26 +285,26 @@ export default function AdminReportsPage() {
           <AdminTable>
             <thead>
               <tr className="border-b border-[var(--border-light)] bg-[var(--surface-soft)]">
-                <th className="px-5 py-3 text-left text-[10px] font-extrabold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+                <th className="whitespace-nowrap px-5 py-3 text-left text-[10px] font-extrabold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
                   Report Metric
                 </th>
 
-                <th className="px-5 py-3 text-left text-[10px] font-extrabold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+                <th className="whitespace-nowrap px-5 py-3 text-left text-[10px] font-extrabold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
                   Current Period
                 </th>
 
-                <th className="px-5 py-3 text-left text-[10px] font-extrabold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+                <th className="whitespace-nowrap px-5 py-3 text-left text-[10px] font-extrabold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
                   Previous Period
                 </th>
 
-                <th className="px-5 py-3 text-left text-[10px] font-extrabold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+                <th className="whitespace-nowrap px-5 py-3 text-left text-[10px] font-extrabold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
                   Variance
                 </th>
               </tr>
             </thead>
 
             <tbody>
-              {reports.map((report) => (
+              {generatedReports.map((report) => (
                 <tr
                   key={report.name}
                   className="
@@ -197,10 +343,30 @@ export default function AdminReportsPage() {
       {/* ==========================================
           DOWNLOAD
       ========================================== */}
-      <div className="mt-5 flex justify-end">
-        <AdminActionButton variant="primary">
+      <div className="mt-5 flex justify-end print:hidden">
+        <button
+          type="button"
+          onClick={handleDownloadPDF}
+          className="
+            inline-flex
+            h-9
+            items-center
+            justify-center
+            rounded-lg
+            bg-[var(--green-dark)]
+            px-5
+            text-[10px]
+            font-extrabold
+            uppercase
+            tracking-[0.08em]
+            !text-white
+            transition-colors
+            duration-200
+            hover:bg-[var(--green-primary)]
+          "
+        >
           Download Report as PDF
-        </AdminActionButton>
+        </button>
       </div>
     </AdminPageLayout>
   );

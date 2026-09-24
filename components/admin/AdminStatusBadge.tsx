@@ -6,6 +6,7 @@ type AdminStatus =
   | "hidden"
   | "completed"
   | "successful"
+  | "restored"
   | "active"
   | "inactive";
 
@@ -23,12 +24,14 @@ export default function AdminStatusBadge({
     visible: "bg-green-100 text-green-700",
     completed: "bg-green-100 text-green-700",
     successful: "bg-green-100 text-green-700",
+    restored: "bg-blue-100 text-blue-700",
     active: "bg-green-100 text-green-700",
 
     pending: "bg-yellow-100 text-yellow-700",
     hidden: "bg-yellow-100 text-yellow-700",
 
     cancelled: "bg-red-100 text-red-700",
+
     inactive: "bg-gray-200 text-gray-700",
   };
 
