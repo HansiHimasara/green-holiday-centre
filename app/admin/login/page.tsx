@@ -593,7 +593,7 @@ export default function AdminLoginPage() {
                 </>
               )}
 
-              {/* Security note */}
+              {/* Security note for users */}
               <div className="mt-6 rounded-lg border border-[var(--green-primary)]/10 bg-[var(--surface-soft)] px-4 py-3">
                 <div className="flex items-start gap-3">
                   <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--green-primary)] text-[10px] font-bold text-white">
