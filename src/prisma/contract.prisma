@@ -202,7 +202,7 @@ model VehicleType {
 // BOOKINGS
 //
 // AIRPORT_TRANSFER / DAY_TOUR / ROUND_TOUR
-// තුනම එකම table එකෙන්.
+// thunama ekama table eken.
 // ======================================================
 
 model Booking {
@@ -277,6 +277,18 @@ model BookingDestination {
 // PRICING / MILEAGE
 //
 // Admin "Our Mileages" page ekata.
+//
+// kilometres
+// = route distance
+//
+// baseCharge
+// = normal route charge
+//
+// extraKilometreCharge
+// = extra 1km charge
+//
+// currency
+// = LKR
 // ======================================================
 
 model Pricing {
@@ -286,7 +298,11 @@ model Pricing {
   toLocation           String
 
   kilometres           Decimal
+
+  baseCharge           Decimal?
   extraKilometreCharge Decimal
+
+  currency             String  @default("LKR")
 
   active               Boolean @default(true)
 
@@ -315,8 +331,6 @@ model Payment {
   status               PaymentStatus @default(PENDING)
   paidAt               TimestamptzString?
 
-  // Existing DB foreign key behavior eka change nokara thiyenawa.
-  // E nisa migration planner issue eka enne naha.
   booking Booking @relation(
     fields: [bookingId],
     references: [id]

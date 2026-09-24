@@ -1203,10 +1203,24 @@
                   "kind": "scalar"
                 }
               },
+              "baseCharge": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/numeric@1",
+                  "kind": "scalar"
+                }
+              },
               "createdAt": {
                 "nullable": false,
                 "type": {
                   "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "currency": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
                   "kind": "scalar"
                 }
               },
@@ -1259,8 +1273,14 @@
                 "active": {
                   "column": "active"
                 },
+                "baseCharge": {
+                  "column": "baseCharge"
+                },
                 "createdAt": {
                   "column": "createdAt"
+                },
+                "currency": {
+                  "column": "currency"
                 },
                 "extraKilometreCharge": {
                   "column": "extraKilometreCharge"
@@ -2531,6 +2551,11 @@
                   "nativeType": "bool",
                   "nullable": false
                 },
+                "baseCharge": {
+                  "codecId": "pg/numeric@1",
+                  "nativeType": "numeric",
+                  "nullable": true
+                },
                 "createdAt": {
                   "codecId": "pg/timestamptz-string@1",
                   "default": {
@@ -2538,6 +2563,15 @@
                     "kind": "function"
                   },
                   "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "currency": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "LKR"
+                  },
+                  "nativeType": "text",
                   "nullable": false
                 },
                 "extraKilometreCharge": {
@@ -2977,7 +3011,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "951e5998712db6ff0b2940860a3b60b2abc3a7d16ea837c92d7de8d05bc2b6df"
+    "storageHash": "84e761eeb0b2b7c3e9f43ebed2c65ff08a4fdc17ab8f230f6d1704a078ea57ff"
   },
   "execution": {
     "executionHash": "4a2275a714614d4fb10c5905b72ddaef973f651a44f4e86f0e384bf22db79bde",
