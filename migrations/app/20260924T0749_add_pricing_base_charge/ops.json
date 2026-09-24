@@ -1,0 +1,86 @@
+[
+  {
+    "id": "column.public.pricing.baseCharge",
+    "label": "Add column \"baseCharge\" to \"pricing\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "baseCharge",
+        "table": "pricing"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"baseCharge\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "pricing",
+          "baseCharge"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"baseCharge\"",
+        "sql": "ALTER TABLE \"public\".\"pricing\" ADD COLUMN \"baseCharge\" numeric"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"baseCharge\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "pricing",
+          "baseCharge"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.pricing.currency",
+    "label": "Add column \"currency\" to \"pricing\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "currency",
+        "table": "pricing"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"currency\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "pricing",
+          "currency"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"currency\"",
+        "sql": "ALTER TABLE \"public\".\"pricing\" ADD COLUMN \"currency\" text DEFAULT 'LKR' NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"currency\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "pricing",
+          "currency"
+        ]
+      }
+    ]
+  }
+]
