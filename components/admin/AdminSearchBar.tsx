@@ -1,9 +1,17 @@
+import type { ChangeEvent } from "react";
+
 interface AdminSearchBarProps {
   placeholder?: string;
+  value?: string;
+  onChange?: (
+    event: ChangeEvent<HTMLInputElement>
+  ) => void;
 }
 
 export default function AdminSearchBar({
   placeholder = "Search...",
+  value,
+  onChange,
 }: AdminSearchBarProps) {
   return (
     <div className="relative w-full max-w-[360px]">
@@ -22,8 +30,26 @@ export default function AdminSearchBar({
 
       <input
         type="text"
+        value={value}
+        onChange={onChange}
         placeholder={placeholder}
-        className="h-[42px] w-full rounded-lg border border-[var(--border-light)] bg-white pl-11 pr-4 text-sm outline-none focus:border-[var(--green-primary)]"
+        className="
+          h-[42px]
+          w-full
+          rounded-lg
+          border
+          border-[var(--border-light)]
+          bg-white
+          pl-11
+          pr-4
+          text-sm
+          outline-none
+          transition-colors
+          duration-200
+          focus:border-[var(--green-primary)]
+          focus:ring-2
+          focus:ring-[var(--green-primary)]/10
+        "
       />
     </div>
   );
