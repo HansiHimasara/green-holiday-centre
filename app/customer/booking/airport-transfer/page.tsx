@@ -1,6 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import {
+  type ChangeEvent,
+  useEffect,
+  useState,
+} from "react";
+import { useRouter } from "next/navigation";
 
 import BookingPageShell from "@/components/bookings/BookingPageShell";
 import BookingStepHeader from "@/components/bookings/BookingStepHeader";
@@ -13,52 +18,213 @@ import Textarea from "@/components/ui/Textarea";
 import Button from "@/components/ui/Button";
 import DecorativePattern from "@/components/ui/DecorativePattern";
 
+import {
+  getBookingDraft,
+  saveBookingDraft,
+} from "@/src/client/bookingDraft";
+
+type Vehicle = {
+  id: string;
+  name: string;
+  category: string;
+  passengerCapacity: number;
+  luggageCapacity: number;
+};
+
+type PricingRoute = {
+  id: number;
+  fromLocation: string;
+  toLocation: string;
+  distance: number;
+  baseCharge: number;
+  extraKilometreCharge: number;
+  currency: string;
+};
+
 export default function AirportTransferPage() {
+  const router = useRouter();
+
   // ==========================================
   // FORM STATE
   // ==========================================
 
   const [travelDate, setTravelDate] = useState("");
   const [passengers, setPassengers] = useState(1);
+  const [selectedPricingRoute, setSelectedPricingRoute] = useState("");
   const [pickupLocation, setPickupLocation] = useState("");
   const [dropLocation, setDropLocation] = useState("");
   const [vehicleSearch, setVehicleSearch] = useState("");
   const [selectedVehicle, setSelectedVehicle] = useState("");
   const [luggage, setLuggage] = useState("");
   const [specialRequirements, setSpecialRequirements] = useState("");
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [pricingRoutes, setPricingRoutes] = useState<PricingRoute[]>([]);
+  const [pricingRoutesLoading, setPricingRoutesLoading] = useState(true);
 
   // ==========================================
-  // TEMPORARY VEHICLE DATA
-  // Replace this with database data later
+  // LOAD SAVED BOOKING DETAILS
   // ==========================================
 
-  const vehicles = [
-    {
-      id: "toyota-prius",
-      name: "Toyota Prius",
-      category: "Premium Sedan",
-    },
-    {
-      id: "toyota-kdh",
-      name: "Toyota KDH",
-      category: "Executive Minivan",
-    },
-    {
-      id: "toyota-hiace",
-      name: "Toyota Hiace",
-      category: "Executive Minivan",
-    },
-    {
-      id: "toyota-rav4",
-      name: "Toyota RAV4",
-      category: "Luxury SUV",
-    },
-    {
-      id: "mercedes-s-class",
-      name: "Mercedes S-Class",
-      category: "Luxury Sedan",
-    },
-  ];
+  useEffect(() => {
+    const draft = getBookingDraft();
+
+    if (draft.serviceType !== "AIRPORT_TRANSFER") {
+      return;
+    }
+
+    if (draft.travelDate) {
+      setTravelDate(draft.travelDate);
+    }
+
+    if (draft.passengerCount) {
+      setPassengers(draft.passengerCount);
+    }
+
+    if (draft.pricingId) {
+      setSelectedPricingRoute(String(draft.pricingId));
+    }
+
+    if (draft.pickupLocation) {
+      setPickupLocation(draft.pickupLocation);
+    }
+
+    if (draft.dropoffLocation) {
+      setDropLocation(draft.dropoffLocation);
+    }
+
+    if (draft.vehicleTypeId) {
+      setSelectedVehicle(String(draft.vehicleTypeId));
+    }
+
+    if (draft.vehicleName) {
+      setVehicleSearch(draft.vehicleName);
+    }
+
+    if (draft.luggageCount !== undefined) {
+      setLuggage(
+        draft.luggageCount >= 4
+          ? "4+"
+          : String(draft.luggageCount)
+      );
+    }
+
+    if (draft.specialRequests) {
+      setSpecialRequirements(draft.specialRequests);
+    }
+  }, []);
+
+  // ==========================================
+  // LOAD VEHICLES FROM DATABASE
+  // ==========================================
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadVehicles = async () => {
+      try {
+        const response = await fetch("/api/vehicles", {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Unable to load vehicles.");
+        }
+
+        const loadedVehicles: Vehicle[] = Array.isArray(data.vehicles)
+          ? data.vehicles.map(
+              (vehicle: {
+                id: number;
+                name: string;
+                description?: string | null;
+                transmission?: string | null;
+                fuelType?: string | null;
+                passengerCapacity: number;
+                luggageCapacity: number;
+              }) => ({
+                id: String(vehicle.id),
+                name: vehicle.name,
+                category:
+                  [vehicle.transmission, vehicle.fuelType]
+                    .filter(Boolean)
+                    .join(" • ") ||
+                  vehicle.description ||
+                  "Available Vehicle",
+                passengerCapacity: vehicle.passengerCapacity,
+                luggageCapacity: vehicle.luggageCapacity,
+              })
+            )
+          : [];
+
+        if (!cancelled) {
+          setVehicles(loadedVehicles);
+        }
+      } catch (error) {
+        console.error("Load vehicles error:", error);
+
+        if (!cancelled) {
+          setVehicles([]);
+        }
+      }
+    };
+
+    void loadVehicles();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // ==========================================
+  // LOAD ACTIVE PRICING ROUTES
+  // ==========================================
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPricingRoutes = async () => {
+      try {
+        setPricingRoutesLoading(true);
+
+        const response = await fetch("/api/pricing-routes", {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Unable to load pricing routes.");
+        }
+
+        const loadedRoutes: PricingRoute[] = Array.isArray(data.routes)
+          ? data.routes
+          : [];
+
+        if (!cancelled) {
+          setPricingRoutes(loadedRoutes);
+        }
+      } catch (error) {
+        console.error("Load pricing routes error:", error);
+
+        if (!cancelled) {
+          setPricingRoutes([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setPricingRoutesLoading(false);
+        }
+      }
+    };
+
+    void loadPricingRoutes();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // ==========================================
   // VEHICLE SEARCH
@@ -86,7 +252,7 @@ export default function AirportTransferPage() {
   };
 
   const handlePassengerInput = (
-    event: React.ChangeEvent<HTMLInputElement>
+    event: ChangeEvent<HTMLInputElement>
   ) => {
     const value = event.target.value;
 
@@ -98,8 +264,106 @@ export default function AirportTransferPage() {
     const number = Number(value);
 
     if (!Number.isNaN(number)) {
-      setPassengers(Math.max(1, number));
+      setPassengers(Math.max(1, Math.floor(number)));
     }
+  };
+
+  const handlePricingRouteChange = (
+    event: ChangeEvent<HTMLSelectElement>
+  ) => {
+    const value = event.target.value;
+
+    setSelectedPricingRoute(value);
+
+    const route = pricingRoutes.find(
+      (pricingRoute) => String(pricingRoute.id) === value
+    );
+
+    if (!route) {
+      setPickupLocation("");
+      setDropLocation("");
+      return;
+    }
+
+    setPickupLocation(route.fromLocation);
+    setDropLocation(route.toLocation);
+  };
+
+  const handleContinue = () => {
+    const selectedVehicleData = vehicles.find(
+      (vehicle) => vehicle.id === selectedVehicle
+    );
+
+    if (!travelDate) {
+      window.alert("Please select your travel date.");
+      return;
+    }
+
+    if (!selectedPricingRoute) {
+      window.alert("Please select an airport transfer route.");
+      return;
+    }
+
+    if (!pickupLocation.trim()) {
+      window.alert("Please enter the pickup location.");
+      return;
+    }
+
+    if (!dropLocation.trim()) {
+      window.alert("Please enter the drop location.");
+      return;
+    }
+
+    if (!selectedVehicleData) {
+      window.alert("Please select a vehicle.");
+      return;
+    }
+
+    if (luggage === "") {
+      window.alert("Please select the luggage requirement.");
+      return;
+    }
+
+    const luggageCount = luggage === "4+" ? 4 : Number(luggage);
+
+    if (passengers > selectedVehicleData.passengerCapacity) {
+      window.alert(
+        `${selectedVehicleData.name} allows a maximum of ${selectedVehicleData.passengerCapacity} passengers.`
+      );
+      return;
+    }
+
+    if (luggageCount > selectedVehicleData.luggageCapacity) {
+      window.alert(
+        `${selectedVehicleData.name} allows a maximum of ${selectedVehicleData.luggageCapacity} luggage items.`
+      );
+      return;
+    }
+
+    saveBookingDraft({
+      serviceType: "AIRPORT_TRANSFER",
+      pricingId: Number(selectedPricingRoute),
+      vehicleTypeId: Number(selectedVehicleData.id),
+      vehicleName: selectedVehicleData.name,
+      travelDate,
+      returnDate: undefined,
+      passengerCount: passengers,
+      luggageCount,
+      numberOfNights: undefined,
+      pickupLocation: pickupLocation.trim(),
+      dropoffLocation: dropLocation.trim(),
+      flightNumber: undefined,
+      specialRequests: specialRequirements.trim(),
+      destinations: [],
+      actualKilometres: undefined,
+      routeDurationMinutes: undefined,
+      totalAmount: undefined,
+      currency: undefined,
+      bookingId: undefined,
+      bookingReference: undefined,
+    });
+
+    router.push("/customer/booking/customer-details");
   };
 
   return (
@@ -202,7 +466,6 @@ export default function AirportTransferPage() {
           FORM AREA
       ========================================== */}
       <section className="relative overflow-hidden bg-[#F8F7F1] py-10">
-
         <div className="relative z-10 mx-auto w-full max-w-[1280px] px-6 md:px-10">
           {/* ==========================================
               NOTICE
@@ -362,6 +625,40 @@ export default function AirportTransferPage() {
             </div>
 
             {/* ==========================================
+                AIRPORT TRANSFER ROUTE
+            ========================================== */}
+            <div>
+              <Select
+                label="Airport Transfer Route"
+                placeholder={
+                  pricingRoutesLoading
+                    ? "Loading airport routes..."
+                    : "Select Airport Transfer Route"
+                }
+                value={selectedPricingRoute}
+                onChange={handlePricingRouteChange}
+                options={pricingRoutes.map((route) => ({
+                  label: `${route.fromLocation} → ${route.toLocation}`,
+                  value: String(route.id),
+                }))}
+              />
+
+              {!pricingRoutesLoading && pricingRoutes.length === 0 && (
+                <p className="mt-2 text-[12px] font-medium text-red-600">
+                  No active airport transfer routes found. Please add an active
+                  route in Admin Pricing.
+                </p>
+              )}
+
+              {selectedPricingRoute && (
+                <p className="mt-2 text-[12px] text-[var(--text-secondary)]">
+                  You can edit the exact drop location below. The final price
+                  will be calculated from the real road distance.
+                </p>
+              )}
+            </div>
+
+            {/* ==========================================
                 PICKUP LOCATION
             ========================================== */}
             <div>
@@ -388,7 +685,7 @@ export default function AirportTransferPage() {
 
                 <Input
                   className="pl-11"
-                  placeholder="e.g., Bandaranaike International Airport (CMB) or Hotel Name"
+                  placeholder="Select an airport route first"
                   value={pickupLocation}
                   onChange={(event) =>
                     setPickupLocation(event.target.value)
@@ -424,7 +721,7 @@ export default function AirportTransferPage() {
 
                 <Input
                   className="pl-11"
-                  placeholder="e.g., Colombo Hotel, Galle Fort, Kandy Center"
+                  placeholder="e.g., Cinnamon Grand Colombo, Sri Lanka"
                   value={dropLocation}
                   onChange={(event) =>
                     setDropLocation(event.target.value)
@@ -556,7 +853,7 @@ export default function AirportTransferPage() {
             ========================================== */}
             <div className="flex justify-end pt-1">
               <Button
-                href="/customer/booking/customer-details"
+                onClick={handleContinue}
                 className="min-w-[190px] px-6 py-3"
               >
                 Continue to Next Step
