@@ -1,3 +1,11 @@
+"use client";
+
+import {
+  useEffect,
+  useState,
+} from "react";
+import { useRouter } from "next/navigation";
+
 import BookingPageShell from "@/components/bookings/BookingPageShell";
 import BookingStepHeader from "@/components/bookings/BookingStepHeader";
 import ServiceTabs from "@/components/bookings/ServiceTabs";
@@ -7,7 +15,234 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import DecorativePattern from "@/components/ui/DecorativePattern";
 
+import {
+  getBookingDraft,
+  type BookingDraft,
+} from "@/src/client/bookingDraft";
+
 export default function PaymentPage() {
+  const router =
+    useRouter();
+
+  const [
+    draft,
+    setDraft,
+  ] =
+    useState<BookingDraft | null>(
+      null
+    );
+
+  const [
+    cardholderName,
+    setCardholderName,
+  ] =
+    useState("");
+
+  const [
+    cardNumber,
+    setCardNumber,
+  ] =
+    useState("");
+
+  const [
+    expiryDate,
+    setExpiryDate,
+  ] =
+    useState("");
+
+  const [
+    cvv,
+    setCvv,
+  ] =
+    useState("");
+
+  const [
+    processing,
+    setProcessing,
+  ] =
+    useState(false);
+
+  useEffect(() => {
+    const savedDraft =
+      getBookingDraft();
+
+    setDraft(
+      savedDraft
+    );
+  }, []);
+
+  const serviceTab:
+    | "airport-transfer"
+    | "day-tour"
+    | "round-tour" =
+    draft?.serviceType ===
+    "DAY_TOUR"
+      ? "day-tour"
+      : draft?.serviceType ===
+          "ROUND_TOUR"
+        ? "round-tour"
+        : "airport-transfer";
+
+  const bookingReference =
+    draft?.bookingReference ??
+    "Not Available";
+
+  const totalAmount =
+    draft?.totalAmount ??
+    850;
+
+  const currency =
+    draft?.currency ??
+    "USD";
+
+  async function handlePayment() {
+    if (!draft) {
+      window.alert(
+        "Booking details are not available."
+      );
+
+      return;
+    }
+
+    if (
+      !draft.bookingId ||
+      !draft.bookingReference
+    ) {
+      window.alert(
+        "Please create your booking before continuing to payment."
+      );
+
+      router.push(
+        "/customer/booking/summary"
+      );
+
+      return;
+    }
+
+    const normalizedName =
+      cardholderName.trim();
+
+    const normalizedCard =
+      cardNumber.replace(
+        /\s/g,
+        ""
+      );
+
+    const normalizedExpiry =
+      expiryDate.trim();
+
+    const normalizedCvv =
+      cvv.trim();
+
+    if (!normalizedName) {
+      window.alert(
+        "Please enter the cardholder name."
+      );
+
+      return;
+    }
+
+    if (
+      !/^\d{13,19}$/.test(
+        normalizedCard
+      )
+    ) {
+      window.alert(
+        "Please enter a valid card number."
+      );
+
+      return;
+    }
+
+    if (
+      !/^(0[1-9]|1[0-2])\s?\/\s?\d{2}$/.test(
+        normalizedExpiry
+      )
+    ) {
+      window.alert(
+        "Please enter the expiry date as MM / YY."
+      );
+
+      return;
+    }
+
+    if (
+      !/^\d{3,4}$/.test(
+        normalizedCvv
+      )
+    ) {
+      window.alert(
+        "Please enter a valid CVV."
+      );
+
+      return;
+    }
+
+    try {
+      setProcessing(
+        true
+      );
+
+      /*
+       * IMPORTANT:
+       * Card number, CVV and
+       * expiry date are NOT
+       * sent to our database.
+       *
+       * Only the booking ID is
+       * sent to create a pending
+       * payment record.
+       */
+      const response =
+        await fetch(
+          "/api/booking-payment",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify({
+                bookingId:
+                  draft.bookingId,
+              }),
+          }
+        );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        window.alert(
+          data.error ||
+            "Unable to process payment."
+        );
+
+        return;
+      }
+
+      router.push(
+        "/customer/booking/confirmation"
+      );
+    } catch (error) {
+      console.error(
+        "Payment error:",
+        error
+      );
+
+      window.alert(
+        "Unable to process payment. Please try again."
+      );
+    } finally {
+      setProcessing(
+        false
+      );
+    }
+  }
+
   return (
     <BookingPageShell>
       {/* ==========================================
@@ -17,7 +252,9 @@ export default function PaymentPage() {
         <DecorativePattern position="bottom-right" />
         
         <div className="mx-auto w-full max-w-[1180px] px-8 pt-6 md:px-10">
-          <ServiceTabs active="airport-transfer" />
+          <ServiceTabs
+            active={serviceTab}
+          />
         </div>
 
         <div className="mx-auto mt-8 w-full max-w-[1180px] border-b border-[var(--border-light)] px-8 pb-5 md:px-10">
@@ -57,7 +294,7 @@ export default function PaymentPage() {
                   </p>
 
                   <h2 className="mt-1 font-serif text-[22px] font-semibold !text-white">
-                    GH-2026/9421
+                    {bookingReference}
                   </h2>
                 </div>
 
@@ -74,22 +311,64 @@ export default function PaymentPage() {
                 <Input
                   label="Cardholder Name"
                   placeholder="Enter cardholder name"
+                  value={
+                    cardholderName
+                  }
+                  onChange={(
+                    event
+                  ) =>
+                    setCardholderName(
+                      event.target
+                        .value
+                    )
+                  }
                 />
 
                 <Input
                   label="Card Number"
                   placeholder="0000 0000 0000 0000"
+                  value={
+                    cardNumber
+                  }
+                  onChange={(
+                    event
+                  ) =>
+                    setCardNumber(
+                      event.target
+                        .value
+                    )
+                  }
                 />
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Input
                     label="Expiry Date"
                     placeholder="MM / YY"
+                    value={
+                      expiryDate
+                    }
+                    onChange={(
+                      event
+                    ) =>
+                      setExpiryDate(
+                        event.target
+                          .value
+                      )
+                    }
                   />
 
                   <Input
                     label="CVV"
                     placeholder="123"
+                    value={cvv}
+                    onChange={(
+                      event
+                    ) =>
+                      setCvv(
+                        event.target
+                          .value
+                      )
+                    }
                   />
                 </div>
 
@@ -115,7 +394,12 @@ export default function PaymentPage() {
 
               {/* PAYMENT BUTTON */}
               <Button
-                href="/customer/booking/confirmation"
+                onClick={() =>
+                  void handlePayment()
+                }
+                disabled={
+                  processing
+                }
                 className="
                   mt-5
                   w-full
@@ -128,7 +412,11 @@ export default function PaymentPage() {
                   hover:!text-white
                 "
               >
-                Complete Payment — $850.00 USD
+                {processing
+                  ? "Processing..."
+                  : `Complete Payment — $${totalAmount.toFixed(
+                      2
+                    )} ${currency}`}
               </Button>
 
               {/* BACK */}
@@ -159,6 +447,7 @@ export default function PaymentPage() {
 
           {/* FOOT NOTE */}
           <br></br>
+
           <p className="mt-5 text-center text-[11px] text-[var(--text-muted)]">
             We support Visa, Mastercard, American Express, and major international cards.
           </p>

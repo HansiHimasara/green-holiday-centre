@@ -11,6 +11,7 @@ interface ButtonProps {
   variant?: ButtonVariant;
   className?: string;
   onClick?: () => void;
+  disabled?: boolean;
 }
 
 export default function Button({
@@ -20,6 +21,7 @@ export default function Button({
   variant = "primary",
   className = "",
   onClick,
+  disabled = false,
 }: ButtonProps) {
   // Base styles used by every button
   const base =
@@ -34,7 +36,11 @@ export default function Button({
       "border border-[var(--green-primary)] bg-white text-[var(--green-primary)] hover:bg-[#F5F7F5]",
   };
 
-  const classes = `${base} ${variants[variant]} ${className}`;
+  const disabledStyle = disabled
+    ? "cursor-not-allowed opacity-50"
+    : "";
+
+  const classes = `${base} ${variants[variant]} ${disabledStyle} ${className}`;
 
   // If href exists, render as a Next.js Link
   if (href) {
@@ -50,6 +56,7 @@ export default function Button({
     <button
       type={type}
       onClick={onClick}
+      disabled={disabled}
       className={classes}
     >
       {children}
