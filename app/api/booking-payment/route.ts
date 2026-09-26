@@ -12,16 +12,28 @@ function createPaymentReference() {
     .toUpperCase()}`;
 }
 
-export async function POST(request: Request) {
+export async function POST(
+  request: Request
+) {
   try {
-    const body = await request.json();
+    const body =
+      await request.json();
 
-    const bookingId = Number(body.bookingId);
+    const bookingId =
+      Number(
+        body.bookingId
+      );
 
-    if (!Number.isInteger(bookingId) || bookingId <= 0) {
+    if (
+      !Number.isInteger(
+        bookingId
+      ) ||
+      bookingId <= 0
+    ) {
       return NextResponse.json(
         {
-          error: "Invalid booking.",
+          error:
+            "Invalid booking.",
         },
         {
           status: 400,
@@ -30,16 +42,18 @@ export async function POST(request: Request) {
     }
 
     // Find booking
-    const booking = await db.orm.public.Booking
-      .where({
-        id: bookingId,
-      })
-      .first();
+    const booking =
+      await db.orm.public.Booking
+        .where({
+          id: bookingId,
+        })
+        .first();
 
     if (!booking) {
       return NextResponse.json(
         {
-          error: "Booking not found.",
+          error:
+            "Booking not found.",
         },
         {
           status: 404,
@@ -47,93 +61,131 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check whether a payment already exists
-    const existingPayment = await db.orm.public.Payment
-      .where({
-        bookingId,
-      })
-      .first();
+    // Check whether a payment
+    // already exists.
+    const existingPayment =
+      await db.orm.public.Payment
+        .where({
+          bookingId,
+        })
+        .first();
 
     if (
       existingPayment &&
-      (existingPayment.status === "PENDING" ||
-        existingPayment.status === "PAID")
+      (
+        existingPayment.status ===
+          "PENDING" ||
+        existingPayment.status ===
+          "PAID"
+      )
     ) {
-      return NextResponse.json({
-        message: "Payment already exists.",
-        payment: {
-          id: existingPayment.id,
-          transactionReference:
-            existingPayment.transactionReference,
-          status: existingPayment.status,
-          amount: existingPayment.amount,
-          currency: existingPayment.currency,
-        },
-      });
-    }
-
-    const transactionReference = createPaymentReference();
-
-    // Card number and CVV are intentionally NOT saved.
-    const payment = await db.orm.public.Payment.create({
-      bookingId,
-
-      amount: String(booking.totalAmount),
-
-      currency: booking.currency,
-
-      paymentMethod: "CARD",
-
-      status: "PENDING",
-
-      transactionReference,
-    });
-
-    if (!payment) {
       return NextResponse.json(
         {
-          error: "Unable to create payment.",
-        },
-        {
-          status: 500,
+          message:
+            "Payment already exists.",
+
+          payment: {
+            id:
+              existingPayment.id,
+
+            transactionReference:
+              existingPayment
+                .transactionReference,
+
+            status:
+              existingPayment.status,
+
+            amount:
+              existingPayment.amount,
+
+            currency:
+              existingPayment
+                .currency,
+          },
         }
       );
     }
 
-    const updatedBooking = await db.orm.public.Booking
-      .where({
-        id: bookingId,
-      })
-      .update({
-        paymentStatus: "PENDING",
-      });
+    const transactionReference =
+      createPaymentReference();
 
-    if (!updatedBooking) {
-      return NextResponse.json(
-        {
-          error: "Unable to update booking payment status.",
-        },
-        {
-          status: 500,
+    const result =
+      await db.transaction(
+        async (tx) => {
+          // Card number and CVV
+          // are intentionally NOT saved.
+          const payment =
+            await tx.orm.public.Payment.create(
+              {
+                bookingId,
+
+                amount:
+                  String(
+                    booking.totalAmount
+                  ),
+
+                currency:
+                  booking.currency,
+
+                paymentMethod:
+                  "CARD",
+
+                status:
+                  "PENDING",
+
+                transactionReference,
+              }
+            );
+
+          if (!payment) {
+            throw new Error(
+              "Unable to create payment."
+            );
+          }
+
+          const updatedBooking =
+            await tx.orm.public.Booking
+              .where({
+                id: bookingId,
+              })
+              .update({
+                paymentStatus:
+                  "PENDING",
+              });
+
+          if (!updatedBooking) {
+            throw new Error(
+              "Unable to update booking payment status."
+            );
+          }
+
+          return {
+            payment,
+          };
         }
       );
-    }
 
     return NextResponse.json(
       {
-        message: "Payment request created successfully.",
+        message:
+          "Payment request created successfully.",
 
         payment: {
-          id: payment.id,
+          id:
+            result.payment.id,
 
           transactionReference:
-            payment.transactionReference,
+            result.payment
+              .transactionReference,
 
-          status: payment.status,
+          status:
+            result.payment.status,
 
-          amount: payment.amount,
+          amount:
+            result.payment.amount,
 
-          currency: payment.currency,
+          currency:
+            result.payment.currency,
         },
       },
       {
@@ -141,11 +193,15 @@ export async function POST(request: Request) {
       }
     );
   } catch (error) {
-    console.error("PAYMENT ERROR:", error);
+    console.error(
+      "PAYMENT ERROR:",
+      error
+    );
 
     return NextResponse.json(
       {
-        error: "Unable to process the payment request.",
+        error:
+          "Unable to process the payment request.",
       },
       {
         status: 500,

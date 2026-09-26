@@ -1,12 +1,16 @@
+import type { ChangeEvent } from "react";
+
 interface AdminSearchBarProps {
   placeholder?: string;
   value?: string;
-  onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onChange?: (
+    event: ChangeEvent<HTMLInputElement>
+  ) => void;
 }
 
 export default function AdminSearchBar({
   placeholder = "Search...",
-  value = "",
+  value,
   onChange,
 }: AdminSearchBarProps) {
   return (
