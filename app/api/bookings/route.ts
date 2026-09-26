@@ -169,8 +169,7 @@ export async function POST(request: Request) {
     }
 
     // Airport Transfer and Day Tour use a pricing route.
-    // Round Tour is handled as a reservation request,
-    // so no pricing route is required.
+    // Round Tour is handled as a reservation request, so no pricing route is required.
     if (
       serviceType !== "ROUND_TOUR" &&
       (
@@ -209,8 +208,7 @@ export async function POST(request: Request) {
     if (!travelDate) {
       return NextResponse.json(
         {
-          error:
-            "Travel date is required.",
+          error: "Travel date is required.",
         },
         {
           status: 400,
@@ -241,8 +239,7 @@ export async function POST(request: Request) {
     ) {
       return NextResponse.json(
         {
-          error:
-            "Luggage count is invalid.",
+          error: "Luggage count is invalid.",
         },
         {
           status: 400,
@@ -253,15 +250,12 @@ export async function POST(request: Request) {
     // Validate nights
     if (
       numberOfNights !== null &&
-      (
-        !Number.isInteger(numberOfNights) ||
-        numberOfNights < 0
-      )
+      (!Number.isInteger(numberOfNights) ||
+        numberOfNights < 0)
     ) {
       return NextResponse.json(
         {
-          error:
-            "Number of nights is invalid.",
+          error: "Number of nights is invalid.",
         },
         {
           status: 400,
@@ -310,8 +304,7 @@ export async function POST(request: Request) {
 
     // Check passenger capacity
     if (
-      passengerCount >
-      vehicle.passengerCapacity
+      passengerCount > vehicle.passengerCapacity
     ) {
       return NextResponse.json(
         {
@@ -325,8 +318,7 @@ export async function POST(request: Request) {
 
     // Check luggage capacity
     if (
-      luggageCount >
-      vehicle.luggageCapacity
+      luggageCount > vehicle.luggageCapacity
     ) {
       return NextResponse.json(
         {
@@ -338,10 +330,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Airport Transfer and Day Tour use automatic
-    // server-side pricing.
-    // Round Tour is currently saved as a reservation
-    // request with price pending.
+    // Airport Transfer and Day Tour use automatic server-side pricing.
+    // Round Tour is currently saved as a reservation request with price pending.
     const calculatedPrice =
       serviceType === "ROUND_TOUR"
         ? null
@@ -366,175 +356,167 @@ export async function POST(request: Request) {
     const bookingReference =
       createBookingReference();
 
-    // Find existing customer
-    const existingCustomer =
-      await db.orm.public.Customer
-        .where({
-          email,
-        })
-        .first();
+    const result = await db.transaction(
+      async (tx) => {
+        // Find existing customer
+        const existingCustomer =
+          await tx.orm.public.Customer
+            .where({
+              email,
+            })
+            .first();
 
-    let customerId: number;
+        let customerId: number;
 
-    // Existing customer
-    if (existingCustomer) {
-      const updatedCustomer =
-        await db.orm.public.Customer
-          .where({
-            id: existingCustomer.id,
-          })
-          .update({
-            fullName,
-            phone,
+        // Existing customer
+        if (existingCustomer) {
+          const updatedCustomer =
+            await tx.orm.public.Customer
+              .where({
+                id: existingCustomer.id,
+              })
+              .update({
+                fullName,
+                phone,
 
-            passportNumber:
-              optionalText(
+                passportNumber: optionalText(
+                  customer.passportNumber
+                ),
+
+                nationality: optionalText(
+                  customer.nationality
+                ),
+
+                address: optionalText(
+                  customer.address
+                ),
+
+                specialRequirements:
+                  optionalText(
+                    customer.specialRequirements
+                  ),
+              });
+
+          if (!updatedCustomer) {
+            throw new Error(
+              "Unable to update customer."
+            );
+          }
+
+          customerId = updatedCustomer.id;
+        } else {
+          // New customer
+          const newCustomer =
+            await tx.orm.public.Customer.create({
+              fullName,
+              email,
+              phone,
+
+              passportNumber: optionalText(
                 customer.passportNumber
               ),
 
-            nationality:
-              optionalText(
+              nationality: optionalText(
                 customer.nationality
               ),
 
-            address:
-              optionalText(
+              address: optionalText(
                 customer.address
               ),
 
-            specialRequirements:
-              optionalText(
+              specialRequirements: optionalText(
                 customer.specialRequirements
               ),
+            });
+
+          if (!newCustomer) {
+            throw new Error(
+              "Unable to create customer."
+            );
+          }
+
+          customerId = newCustomer.id;
+        }
+
+        // Create booking
+        const booking =
+          await tx.orm.public.Booking.create({
+            bookingReference,
+
+            customerId,
+
+            vehicleTypeId,
+
+            serviceType,
+
+            travelDate,
+
+            returnDate: optionalText(
+              body.returnDate
+            ),
+
+            passengerCount,
+
+            luggageCount,
+
+            numberOfNights,
+
+            pickupLocation: optionalText(
+              body.pickupLocation
+            ),
+
+            dropoffLocation: optionalText(
+              body.dropoffLocation
+            ),
+
+            flightNumber: optionalText(
+              body.flightNumber
+            ),
+
+            specialRequests: optionalText(
+              body.specialRequests
+            ),
+
+            totalAmount: totalAmount.toFixed(2),
+
+            currency,
+
+            status: "PENDING",
+
+            paymentStatus: "UNPAID",
           });
 
-      if (!updatedCustomer) {
-        throw new Error(
-          "Unable to update customer."
-        );
-      }
+        if (!booking) {
+          throw new Error(
+            "Unable to create booking."
+          );
+        }
 
-      customerId =
-        updatedCustomer.id;
-    } else {
-      // New customer
-      const newCustomer =
-        await db.orm.public.Customer.create({
-          fullName,
-          email,
-          phone,
+        // Save Round Tour destinations
+        if (serviceType === "ROUND_TOUR") {
+          for (
+            let index = 0;
+            index < destinations.length;
+            index += 1
+          ) {
+            await tx.orm.public.BookingDestination.create(
+              {
+                bookingId: booking.id,
 
-          passportNumber:
-            optionalText(
-              customer.passportNumber
-            ),
+                nightNumber: index + 1,
 
-          nationality:
-            optionalText(
-              customer.nationality
-            ),
-
-          address:
-            optionalText(
-              customer.address
-            ),
-
-          specialRequirements:
-            optionalText(
-              customer.specialRequirements
-            ),
-        });
-
-      if (!newCustomer) {
-        throw new Error(
-          "Unable to create customer."
-        );
-      }
-
-      customerId =
-        newCustomer.id;
-    }
-
-    // Create booking
-    const booking =
-      await db.orm.public.Booking.create({
-        bookingReference,
-
-        customerId,
-
-        vehicleTypeId,
-
-        serviceType,
-
-        travelDate,
-
-        returnDate: optionalText(
-          body.returnDate
-        ),
-
-        passengerCount,
-
-        luggageCount,
-
-        numberOfNights,
-
-        pickupLocation:
-          optionalText(
-            body.pickupLocation
-          ),
-
-        dropoffLocation:
-          optionalText(
-            body.dropoffLocation
-          ),
-
-        flightNumber:
-          optionalText(
-            body.flightNumber
-          ),
-
-        specialRequests:
-          optionalText(
-            body.specialRequests
-          ),
-
-        totalAmount:
-          totalAmount.toFixed(2),
-
-        currency,
-
-        status: "PENDING",
-
-        paymentStatus: "UNPAID",
-      });
-
-    if (!booking) {
-      throw new Error(
-        "Unable to create booking."
-      );
-    }
-
-    // Save Round Tour destinations
-    if (serviceType === "ROUND_TOUR") {
-      for (
-        let index = 0;
-        index < destinations.length;
-        index += 1
-      ) {
-        await db.orm.public.BookingDestination.create(
-          {
-            bookingId:
-              booking.id,
-
-            nightNumber:
-              index + 1,
-
-            destination:
-              destinations[index],
+                destination: destinations[index],
+              }
+            );
           }
-        );
+        }
+
+        return {
+          booking,
+          customerId,
+        };
       }
-    }
+    );
 
     // Successful booking response
     return NextResponse.json(
@@ -543,38 +525,33 @@ export async function POST(request: Request) {
           "Booking created successfully.",
 
         booking: {
-          id: booking.id,
+          id: result.booking.id,
 
           bookingReference:
-            booking.bookingReference,
+            result.booking.bookingReference,
 
           serviceType:
-            booking.serviceType,
+            result.booking.serviceType,
 
-          status:
-            booking.status,
+          status: result.booking.status,
 
           paymentStatus:
-            booking.paymentStatus,
+            result.booking.paymentStatus,
 
-          customerId,
+          customerId: result.customerId,
 
           vehicleTypeId:
-            booking.vehicleTypeId,
+            result.booking.vehicleTypeId,
 
           totalAmount,
 
           currency,
 
           actualKilometres:
-            calculatedPrice?.route
-              .actualKilometres ??
-            null,
+            calculatedPrice?.route.actualKilometres ?? null,
 
           routeDurationMinutes:
-            calculatedPrice?.route
-              .durationMinutes ??
-            null,
+            calculatedPrice?.route.durationMinutes ?? null,
         },
       },
       {
@@ -592,17 +569,12 @@ export async function POST(request: Request) {
         ? error.message
         : "Unable to create the booking.";
 
-    const status =
-      message.includes(
-        "OPENROUTESERVICE_API_KEY"
-      )
-        ? 500
-        : message.includes(
-            "Unable to create"
-          ) ||
-          message.includes(
-            "Unable to update"
-          )
+    const status = message.includes(
+      "OPENROUTESERVICE_API_KEY"
+    )
+      ? 500
+      : message.includes("Unable to create") ||
+          message.includes("Unable to update")
         ? 500
         : 400;
 
