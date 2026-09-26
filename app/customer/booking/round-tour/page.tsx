@@ -1,6 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import type {
+  ChangeEvent,
+} from "react";
+import {
+  useRouter,
+} from "next/navigation";
 
 import BookingPageShell from "@/components/bookings/BookingPageShell";
 import BookingStepHeader from "@/components/bookings/BookingStepHeader";
@@ -14,92 +24,601 @@ import Textarea from "@/components/ui/Textarea";
 import Button from "@/components/ui/Button";
 import DecorativePattern from "@/components/ui/DecorativePattern";
 
+import {
+  getBookingDraft,
+  saveBookingDraft,
+} from "@/src/client/bookingDraft";
+
+type Vehicle = {
+  id: number;
+  name: string;
+  description: string | null;
+  passengerCapacity: number;
+  luggageCapacity: number;
+  transmission: string | null;
+  fuelType: string | null;
+  airConditioning: boolean;
+  chauffeurIncluded: boolean;
+  chauffeurLanguage: string | null;
+  imageUrl: string | null;
+  status: string;
+};
+
+function calculateReturnDate(
+  startDate: string,
+  numberOfNights: number
+) {
+  const date =
+    new Date(
+      `${startDate}T00:00:00Z`
+    );
+
+  date.setUTCDate(
+    date.getUTCDate() +
+      numberOfNights
+  );
+
+  return date
+    .toISOString()
+    .slice(0, 10);
+}
+
 export default function RoundTourPage() {
+  const router =
+    useRouter();
+
   // ==========================================
   // FORM STATE
   // ==========================================
 
-  const [startDate, setStartDate] = useState("");
-  const [passengers, setPassengers] = useState(1);
-  const [vehicleSearch, setVehicleSearch] = useState("");
-  const [selectedVehicle, setSelectedVehicle] = useState("");
-  const [luggage, setLuggage] = useState("");
-  const [specialNotes, setSpecialNotes] = useState("");
+  const [
+    startDate,
+    setStartDate,
+  ] = useState("");
+
+  const [
+    passengers,
+    setPassengers,
+  ] = useState(1);
+
+  const [
+    vehicleSearch,
+    setVehicleSearch,
+  ] = useState("");
+
+  const [
+    selectedVehicleId,
+    setSelectedVehicleId,
+  ] =
+    useState<number | null>(
+      null
+    );
+
+  const [
+    luggage,
+    setLuggage,
+  ] = useState("");
+
+  const [
+    specialNotes,
+    setSpecialNotes,
+  ] = useState("");
+
+  const [
+    destinations,
+    setDestinations,
+  ] =
+    useState<string[]>([
+      "",
+      "",
+      "",
+    ]);
+
+  const [
+    vehicles,
+    setVehicles,
+  ] =
+    useState<Vehicle[]>([]);
+
+  const [
+    pickupLocation,
+    setPickupLocation,
+  ] = useState("");
+
+  const [
+    dropoffLocation,
+    setDropoffLocation,
+  ] = useState("");
 
   // ==========================================
-  // TEMPORARY VEHICLE DATA
-  // Replace this with database data later
+  // LOAD SAVED ROUND TOUR DATA
   // ==========================================
 
-  const vehicles = [
-    {
-      id: "toyota-prius",
-      name: "Toyota Prius",
-      category: "Premium Sedan",
-    },
-    {
-      id: "toyota-kdh",
-      name: "Toyota KDH",
-      category: "Executive Minivan",
-    },
-    {
-      id: "toyota-hiace",
-      name: "Toyota Hiace",
-      category: "Executive Minivan",
-    },
-    {
-      id: "toyota-rav4",
-      name: "Toyota RAV4",
-      category: "Luxury SUV",
-    },
-    {
-      id: "mercedes-s-class",
-      name: "Mercedes S-Class",
-      category: "Luxury Sedan",
-    },
-  ];
+  useEffect(() => {
+    const draft =
+      getBookingDraft();
+
+    if (
+      draft.serviceType !==
+      "ROUND_TOUR"
+    ) {
+      return;
+    }
+
+    if (
+      draft.travelDate
+    ) {
+      setStartDate(
+        draft.travelDate
+      );
+    }
+
+    if (
+      draft.passengerCount
+    ) {
+      setPassengers(
+        draft.passengerCount
+      );
+    }
+
+    if (
+      draft.vehicleTypeId
+    ) {
+      setSelectedVehicleId(
+        draft.vehicleTypeId
+      );
+    }
+
+    if (
+      draft.vehicleName
+    ) {
+      setVehicleSearch(
+        draft.vehicleName
+      );
+    }
+
+    if (
+      draft.luggageCount !==
+      undefined
+    ) {
+      setLuggage(
+        String(
+          draft.luggageCount
+        )
+      );
+    }
+
+    if (
+      draft.pickupLocation
+    ) {
+      setPickupLocation(
+        draft.pickupLocation
+      );
+    }
+
+    if (
+      draft.dropoffLocation
+    ) {
+      setDropoffLocation(
+        draft.dropoffLocation
+      );
+    }
+
+    if (
+      draft.specialRequests
+    ) {
+      setSpecialNotes(
+        draft.specialRequests
+      );
+    }
+
+    if (
+      draft.destinations &&
+      draft.destinations
+        .length > 0
+    ) {
+      const saved =
+        [
+          ...draft.destinations,
+        ];
+
+      while (
+        saved.length < 3
+      ) {
+        saved.push("");
+      }
+
+      setDestinations(
+        saved
+      );
+    }
+  }, []);
+
+  // ==========================================
+  // LOAD VEHICLES FROM DATABASE
+  // ==========================================
+
+  useEffect(() => {
+    let cancelled =
+      false;
+
+    async function loadVehicles() {
+      try {
+        const response =
+          await fetch(
+            "/api/vehicles",
+            {
+              method: "GET",
+              cache:
+                "no-store",
+            }
+          );
+
+        const data =
+          await response.json();
+
+        if (
+          cancelled
+        ) {
+          return;
+        }
+
+        if (
+          !response.ok
+        ) {
+          console.error(
+            data.error ||
+              "Unable to load vehicles."
+          );
+
+          return;
+        }
+
+        const loadedVehicles:
+          Vehicle[] =
+          Array.isArray(
+            data.vehicles
+          )
+            ? data.vehicles
+            : [];
+
+        setVehicles(
+          loadedVehicles
+        );
+
+        const draft =
+          getBookingDraft();
+
+        if (
+          draft.serviceType ===
+            "ROUND_TOUR" &&
+          draft.vehicleTypeId
+        ) {
+          const savedVehicle =
+            loadedVehicles.find(
+              (
+                vehicle
+              ) =>
+                vehicle.id ===
+                draft.vehicleTypeId
+            );
+
+          if (
+            savedVehicle
+          ) {
+            setSelectedVehicleId(
+              savedVehicle.id
+            );
+
+            setVehicleSearch(
+              savedVehicle.name
+            );
+          }
+        }
+      } catch (error) {
+        console.error(
+          "Load vehicles error:",
+          error
+        );
+      }
+    }
+
+    void loadVehicles();
+
+    return () => {
+      cancelled =
+        true;
+    };
+  }, []);
 
   // ==========================================
   // VEHICLE SEARCH
   // ==========================================
 
-  const filteredVehicles = vehicles.filter((vehicle) => {
-    const search = vehicleSearch.toLowerCase();
+  const filteredVehicles =
+    useMemo(() => {
+      const search =
+        vehicleSearch
+          .toLowerCase()
+          .trim();
 
-    return (
-      vehicle.name.toLowerCase().includes(search) ||
-      vehicle.category.toLowerCase().includes(search)
-    );
-  });
+      return vehicles.filter(
+        (vehicle) => {
+          return (
+            vehicle.name
+              .toLowerCase()
+              .includes(
+                search
+              ) ||
+            (
+              vehicle.description ??
+              ""
+            )
+              .toLowerCase()
+              .includes(
+                search
+              ) ||
+            (
+              vehicle.transmission ??
+              ""
+            )
+              .toLowerCase()
+              .includes(
+                search
+              ) ||
+            (
+              vehicle.fuelType ??
+              ""
+            )
+              .toLowerCase()
+              .includes(
+                search
+              )
+          );
+        }
+      );
+    }, [
+      vehicleSearch,
+      vehicles,
+    ]);
+
+  const selectedVehicle =
+    vehicles.find(
+      (vehicle) =>
+        vehicle.id ===
+        selectedVehicleId
+    ) ?? null;
 
   // ==========================================
   // PASSENGER CONTROLS
   // ==========================================
 
-  const increasePassengers = () => {
-    setPassengers((current) => current + 1);
-  };
+  const increasePassengers =
+    () => {
+      setPassengers(
+        (current) =>
+          current + 1
+      );
+    };
 
-  const decreasePassengers = () => {
-    setPassengers((current) => Math.max(1, current - 1));
-  };
+  const decreasePassengers =
+    () => {
+      setPassengers(
+        (current) =>
+          Math.max(
+            1,
+            current - 1
+          )
+      );
+    };
 
-  const handlePassengerInput = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const value = event.target.value;
+  const handlePassengerInput =
+    (
+      event:
+        ChangeEvent<HTMLInputElement>
+    ) => {
+      const value =
+        event.target.value;
 
-    if (value === "") {
-      setPassengers(1);
+      if (
+        value === ""
+      ) {
+        setPassengers(1);
+        return;
+      }
+
+      const number =
+        Number(value);
+
+      if (
+        !Number.isNaN(
+          number
+        )
+      ) {
+        setPassengers(
+          Math.max(
+            1,
+            Math.floor(
+              number
+            )
+          )
+        );
+      }
+    };
+
+  // ==========================================
+  // CONTINUE
+  // ==========================================
+
+  function handleContinue() {
+    if (!startDate) {
+      window.alert(
+        "Please select the tour start date."
+      );
+
       return;
     }
 
-    const number = Number(value);
+    if (
+      !pickupLocation.trim()
+    ) {
+      window.alert(
+        "Please enter the pickup location."
+      );
 
-    if (!Number.isNaN(number)) {
-      setPassengers(Math.max(1, number));
+      return;
     }
-  };
+
+    if (
+      !dropoffLocation.trim()
+    ) {
+      window.alert(
+        "Please enter the final drop location."
+      );
+
+      return;
+    }
+
+    if (
+      !selectedVehicle
+    ) {
+      window.alert(
+        "Please select a vehicle."
+      );
+
+      return;
+    }
+
+    if (
+      luggage === ""
+    ) {
+      window.alert(
+        "Please select the luggage count."
+      );
+
+      return;
+    }
+
+    const luggageCount =
+      Number(luggage);
+
+    if (
+      passengers >
+      selectedVehicle.passengerCapacity
+    ) {
+      window.alert(
+        `${selectedVehicle.name} allows a maximum of ${selectedVehicle.passengerCapacity} passengers.`
+      );
+
+      return;
+    }
+
+    if (
+      luggageCount >
+      selectedVehicle.luggageCapacity
+    ) {
+      window.alert(
+        `${selectedVehicle.name} allows a maximum of ${selectedVehicle.luggageCapacity} luggage items.`
+      );
+
+      return;
+    }
+
+    const cleanedDestinations =
+      destinations.map(
+        (destination) =>
+          destination.trim()
+      );
+
+    const hasEmptyDestination =
+      cleanedDestinations.some(
+        (destination) =>
+          !destination
+      );
+
+    if (
+      hasEmptyDestination
+    ) {
+      window.alert(
+        "Please enter a destination for every night."
+      );
+
+      return;
+    }
+
+    const numberOfNights =
+      cleanedDestinations.length;
+
+    const returnDate =
+      calculateReturnDate(
+        startDate,
+        numberOfNights
+      );
+
+    saveBookingDraft({
+      serviceType:
+        "ROUND_TOUR",
+
+      pricingId:
+        undefined,
+
+      vehicleTypeId:
+        selectedVehicle.id,
+
+      vehicleName:
+        selectedVehicle.name,
+
+      travelDate:
+        startDate,
+
+      returnDate,
+
+      passengerCount:
+        passengers,
+
+      luggageCount,
+
+      numberOfNights,
+
+      pickupLocation:
+        pickupLocation.trim(),
+
+      dropoffLocation:
+        dropoffLocation.trim(),
+
+      flightNumber:
+        undefined,
+
+      specialRequests:
+        specialNotes.trim(),
+
+      destinations:
+        cleanedDestinations,
+
+      // New booking details
+      bookingId:
+        undefined,
+
+      bookingReference:
+        undefined,
+
+      actualKilometres:
+        undefined,
+
+      routeDurationMinutes:
+        undefined,
+
+      totalAmount:
+        undefined,
+
+      currency:
+        undefined,
+    });
+
+    router.push(
+      "/customer/booking/customer-details"
+    );
+  }
 
   return (
     <BookingPageShell>
@@ -204,6 +723,7 @@ export default function RoundTourPage() {
 
         <div className="relative z-10 mx-auto w-full max-w-[1280px] px-6 md:px-10">
           <div className="space-y-8">
+
             {/* ==========================================
                 DATE + PASSENGERS
             ========================================== */}
@@ -220,9 +740,22 @@ export default function RoundTourPage() {
                 <input
                   id="start-date"
                   type="date"
-                  value={startDate}
-                  onChange={(event) => setStartDate(event.target.value)}
-                  min={new Date().toISOString().split("T")[0]}
+                  value={
+                    startDate
+                  }
+                  onChange={(
+                    event
+                  ) =>
+                    setStartDate(
+                      event.target
+                        .value
+                    )
+                  }
+                  min={
+                    new Date()
+                      .toISOString()
+                      .split("T")[0]
+                  }
                   className="
                     h-[48px]
                     w-full
@@ -252,8 +785,12 @@ export default function RoundTourPage() {
                   {/* Minus */}
                   <button
                     type="button"
-                    onClick={decreasePassengers}
-                    disabled={passengers <= 1}
+                    onClick={
+                      decreasePassengers
+                    }
+                    disabled={
+                      passengers <= 1
+                    }
                     className="
                       flex
                       h-full
@@ -277,8 +814,12 @@ export default function RoundTourPage() {
                   <input
                     type="number"
                     min="1"
-                    value={passengers}
-                    onChange={handlePassengerInput}
+                    value={
+                      passengers
+                    }
+                    onChange={
+                      handlePassengerInput
+                    }
                     className="
                       h-full
                       flex-1
@@ -297,7 +838,9 @@ export default function RoundTourPage() {
                   {/* Plus */}
                   <button
                     type="button"
-                    onClick={increasePassengers}
+                    onClick={
+                      increasePassengers
+                    }
                     className="
                       flex
                       h-full
@@ -319,6 +862,105 @@ export default function RoundTourPage() {
             </div>
 
             {/* ==========================================
+                PICKUP + FINAL DROP LOCATION
+            ========================================== */}
+            <div className="rounded-xl border border-[var(--yellow-golden)]/30 bg-[var(--yellow-warm)]/10 px-4 py-3 text-[12px] font-medium text-[var(--text-primary)]">
+              Enter your own pickup location, night destinations, and final drop location. The system will calculate the full route distance from these locations.
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div>
+                <label
+                  htmlFor="round-tour-pickup"
+                  className="mb-2 block text-[13px] font-bold text-[var(--text-primary)]"
+                >
+                  Pickup Location
+                </label>
+
+                <div className="relative">
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="17"
+                    height="17"
+                    fill="none"
+                    stroke="var(--green-primary)"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="absolute left-4 top-1/2 -translate-y-1/2"
+                    aria-hidden="true"
+                  >
+                    <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />
+                    <circle
+                      cx="12"
+                      cy="10"
+                      r="2.5"
+                    />
+                  </svg>
+
+                  <Input
+                    id="round-tour-pickup"
+                    className="pl-11"
+                    placeholder="Enter hotel or pickup location"
+                    value={
+                      pickupLocation
+                    }
+                    onChange={(event) =>
+                      setPickupLocation(
+                        event.target.value
+                      )
+                    }
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="round-tour-dropoff"
+                  className="mb-2 block text-[13px] font-bold text-[var(--text-primary)]"
+                >
+                  Final Drop Location
+                </label>
+
+                <div className="relative">
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="17"
+                    height="17"
+                    fill="none"
+                    stroke="var(--green-primary)"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="absolute left-4 top-1/2 -translate-y-1/2"
+                    aria-hidden="true"
+                  >
+                    <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />
+                    <circle
+                      cx="12"
+                      cy="10"
+                      r="2.5"
+                    />
+                  </svg>
+
+                  <Input
+                    id="round-tour-dropoff"
+                    className="pl-11"
+                    placeholder="Enter final hotel or drop location"
+                    value={
+                      dropoffLocation
+                    }
+                    onChange={(event) =>
+                      setDropoffLocation(
+                        event.target.value
+                      )
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* ==========================================
                 VEHICLE PREFERENCE
             ========================================== */}
             <div>
@@ -333,16 +975,27 @@ export default function RoundTourPage() {
                 <Input
                   id="vehicle-search"
                   placeholder="Search vehicle or fleet class..."
-                  value={vehicleSearch}
-                  onChange={(event) => {
-                    setVehicleSearch(event.target.value);
-                    setSelectedVehicle("");
+                  value={
+                    vehicleSearch
+                  }
+                  onChange={(
+                    event
+                  ) => {
+                    setVehicleSearch(
+                      event.target
+                        .value
+                    );
+
+                    setSelectedVehicleId(
+                      null
+                    );
                   }}
                 />
 
                 {/* Suggestions */}
-                {vehicleSearch.trim() !== "" &&
-                  selectedVehicle === "" && (
+                {vehicleSearch.trim() !==
+                  "" &&
+                  !selectedVehicle && (
                     <div
                       className="
                         absolute
@@ -358,36 +1011,52 @@ export default function RoundTourPage() {
                         shadow-[0_15px_40px_rgba(0,0,0,0.12)]
                       "
                     >
-                      {filteredVehicles.length > 0 ? (
-                        filteredVehicles.map((vehicle) => (
-                          <button
-                            key={vehicle.id}
-                            type="button"
-                            onClick={() => {
-                              setSelectedVehicle(vehicle.id);
-                              setVehicleSearch(vehicle.name);
-                            }}
-                            className="
-                              flex
-                              w-full
-                              items-center
-                              justify-between
-                              px-4
-                              py-3
-                              text-left
-                              transition
-                              hover:bg-[var(--green-primary)]/5
-                            "
-                          >
-                            <span className="text-[14px] font-medium text-[var(--text-primary)]">
-                              {vehicle.name}
-                            </span>
+                      {filteredVehicles.length >
+                      0 ? (
+                        filteredVehicles.map(
+                          (
+                            vehicle
+                          ) => (
+                            <button
+                              key={
+                                vehicle.id
+                              }
+                              type="button"
+                              onClick={() => {
+                                setSelectedVehicleId(
+                                  vehicle.id
+                                );
 
-                            <span className="text-[12px] text-[var(--text-secondary)]">
-                              {vehicle.category}
-                            </span>
-                          </button>
-                        ))
+                                setVehicleSearch(
+                                  vehicle.name
+                                );
+                              }}
+                              className="
+                                flex
+                                w-full
+                                items-center
+                                justify-between
+                                px-4
+                                py-3
+                                text-left
+                                transition
+                                hover:bg-[var(--green-primary)]/5
+                              "
+                            >
+                              <span className="text-[14px] font-medium text-[var(--text-primary)]">
+                                {
+                                  vehicle.name
+                                }
+                              </span>
+
+                              <span className="text-[12px] text-[var(--text-secondary)]">
+                                {vehicle.transmission ??
+                                  vehicle.fuelType ??
+                                  "Available Vehicle"}
+                              </span>
+                            </button>
+                          )
+                        )
                       ) : (
                         <div className="px-4 py-3 text-[13px] text-[var(--text-secondary)]">
                           No vehicles found.
@@ -402,7 +1071,9 @@ export default function RoundTourPage() {
                 <p className="mt-2 text-[12px] text-[var(--text-secondary)]">
                   Vehicle selected:{" "}
                   <span className="font-semibold text-[var(--text-primary)]">
-                    {vehicleSearch}
+                    {
+                      vehicleSearch
+                    }
                   </span>
                 </p>
               )}
@@ -414,28 +1085,42 @@ export default function RoundTourPage() {
             <Select
               label="Luggage Requirements"
               placeholder="Select Bag Count"
-              value={luggage}
-              onChange={(event) => setLuggage(event.target.value)}
+              value={
+                luggage
+              }
+              onChange={(
+                event
+              ) =>
+                setLuggage(
+                  event.target
+                    .value
+                )
+              }
               options={[
                 {
-                  label: "No Luggage",
+                  label:
+                    "No Luggage",
                   value: "0",
                 },
                 {
-                  label: "1 Bag",
+                  label:
+                    "1 Bag",
                   value: "1",
                 },
                 {
-                  label: "2 Bags",
+                  label:
+                    "2 Bags",
                   value: "2",
                 },
                 {
-                  label: "3 Bags",
+                  label:
+                    "3 Bags",
                   value: "3",
                 },
                 {
-                  label: "4+ Bags",
-                  value: "4+",
+                  label:
+                    "4+ Bags",
+                  value: "4",
                 },
               ]}
             />
@@ -483,8 +1168,14 @@ export default function RoundTourPage() {
                     className="mt-[1px] shrink-0"
                     aria-hidden="true"
                   >
-                    <circle cx="12" cy="12" r="9" />
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="9"
+                    />
+
                     <path d="M12 8v5" />
+
                     <path d="M12 16h.01" />
                   </svg>
 
@@ -495,7 +1186,14 @@ export default function RoundTourPage() {
                 </div>
               </div>
 
-              <RoundTourNights />
+              <RoundTourNights
+                destinations={
+                  destinations
+                }
+                onChange={
+                  setDestinations
+                }
+              />
             </div>
 
             {/* ==========================================
@@ -504,8 +1202,17 @@ export default function RoundTourPage() {
             <Textarea
               label="Special Notes or Requirements"
               placeholder="Tell us about preferred destinations, activities, accessibility requirements, or anything else..."
-              value={specialNotes}
-              onChange={(event) => setSpecialNotes(event.target.value)}
+              value={
+                specialNotes
+              }
+              onChange={(
+                event
+              ) =>
+                setSpecialNotes(
+                  event.target
+                    .value
+                )
+              }
             />
 
             {/* ==========================================
@@ -513,7 +1220,9 @@ export default function RoundTourPage() {
             ========================================== */}
             <div className="flex justify-end pt-1">
               <Button
-                href="/customer/booking/customer-details"
+                onClick={
+                  handleContinue
+                }
                 className="min-w-[190px] px-6 py-3"
               >
                 Continue to Next Step

@@ -39,22 +39,10 @@ export default function Button({
   };
 
   const disabledStyle = disabled
-    ? "cursor-not-allowed opacity-60"
+    ? "cursor-not-allowed opacity-50"
     : "";
 
   const classes = `${base} ${variants[variant]} ${disabledStyle} ${className}`;
-
-  // Render a disabled link as text
-  if (href && disabled) {
-    return (
-      <span
-        className={classes}
-        aria-disabled="true"
-      >
-        {children}
-      </span>
-    );
-  }
 
   // Render as a link
   if (href) {
