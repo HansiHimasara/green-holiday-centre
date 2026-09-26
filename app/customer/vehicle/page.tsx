@@ -17,7 +17,6 @@ import InfoRow from "@/components/common/InfoRow";
 import VehicleSpec from "@/components/vehicles/VehicleSpec";
 
 import Button from "@/components/ui/Button";
-import DecorativePattern from "@/components/ui/DecorativePattern";
 
 const vehicle = {
   name: "Premium Hybrid Sedan",
@@ -65,6 +64,7 @@ export default function VehicleDetailsPage() {
                     alt={vehicle.name}
                     fill
                     priority
+                    sizes="(min-width: 1024px) 55vw, 100vw"
                     className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.02]"
                   />
 
