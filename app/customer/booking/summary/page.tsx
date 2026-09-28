@@ -312,6 +312,8 @@ export default function BookingSummaryPage() {
     draft.serviceType === "ROUND_TOUR";
 
   const totalAmount =
+    !quoteLoading &&
+    !quoteError &&
     typeof draft.totalAmount ===
       "number" &&
     Number.isFinite(
@@ -325,6 +327,8 @@ export default function BookingSummaryPage() {
     "USD";
 
   const distanceText =
+    !quoteLoading &&
+    !quoteError &&
     typeof draft.actualKilometres ===
       "number" &&
     Number.isFinite(
@@ -902,7 +906,9 @@ export default function BookingSummaryPage() {
                   </div>
 
                   <span className="whitespace-nowrap font-serif text-[26px] font-bold text-[var(--green-dark)]">
-                    {formatCurrencyAmount(totalAmount, currency)}
+                    {quoteError
+                      ? "Unavailable"
+                      : formatCurrencyAmount(totalAmount, currency)}
                   </span>
                 </div>
               </div>
