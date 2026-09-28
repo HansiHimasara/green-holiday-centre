@@ -1,10 +1,14 @@
 "use client";
 
+import { earliestBookingDate } from "@/src/client/bookingDates";
+
 import {
   useEffect,
   useMemo,
   useState,
+  type ChangeEvent,
 } from "react";
+
 import { useRouter } from "next/navigation";
 
 import BookingPageShell from "@/components/bookings/BookingPageShell";
@@ -13,7 +17,6 @@ import ServiceTabs from "@/components/bookings/ServiceTabs";
 import ServiceColorDashes from "@/components/bookings/ServiceColorDashes";
 
 import Input from "@/components/ui/Input";
-import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
 import Button from "@/components/ui/Button";
 import DecorativePattern from "@/components/ui/DecorativePattern";
@@ -22,6 +25,10 @@ import {
   getBookingDraft,
   saveBookingDraft,
 } from "@/src/client/bookingDraft";
+
+/* =========================================================
+   TYPES
+========================================================= */
 
 type Vehicle = {
   id: number;
@@ -38,23 +45,385 @@ type Vehicle = {
   status: string;
 };
 
-type PricingRoute = {
-  id: number;
-  fromLocation: string;
-  toLocation: string;
-  distance: number;
-  baseCharge: number;
-  extraKilometreCharge: number;
-  currency: string;
+type PhotonFeature = {
+  properties?: {
+    name?: string;
+    street?: string;
+    housenumber?: string;
+    district?: string;
+    city?: string;
+    county?: string;
+    state?: string;
+    postcode?: string;
+    country?: string;
+    countrycode?: string;
+    type?: string;
+  };
 };
 
-export default function DayTourPage() {
-  const router =
-    useRouter();
+type PhotonResponse = {
+  features?: PhotonFeature[];
+};
 
-  // ==========================================
-  // FORM STATE
-  // ==========================================
+type LocationAutocompleteProps = {
+  id: string;
+  label: string;
+  placeholder: string;
+  value: string;
+  onChange: (value: string) => void;
+};
+
+/* =========================================================
+   PHOTON LOCATION HELPERS
+========================================================= */
+
+function buildLocationLabel(feature: PhotonFeature) {
+  const properties = feature.properties ?? {};
+
+  const streetAddress = [
+    properties.housenumber,
+    properties.street,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const primary =
+    properties.name ||
+    streetAddress ||
+    properties.city ||
+    properties.district ||
+    properties.county ||
+    "";
+
+  const possibleParts = [
+    primary,
+    properties.street !== primary
+      ? properties.street
+      : undefined,
+    properties.district,
+    properties.city,
+    properties.county,
+    properties.state,
+    properties.country,
+  ];
+
+  const uniqueParts: string[] = [];
+
+  possibleParts.forEach((part) => {
+    if (!part) {
+      return;
+    }
+
+    const alreadyExists =
+      uniqueParts.some(
+        (existingPart) =>
+          existingPart.toLowerCase() ===
+          part.toLowerCase()
+      );
+
+    if (!alreadyExists) {
+      uniqueParts.push(part);
+    }
+  });
+
+  return uniqueParts.join(", ");
+}
+
+/* =========================================================
+   LOCATION ICON
+========================================================= */
+
+function LocationIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="17"
+      height="17"
+      fill="none"
+      stroke="var(--green-primary)"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="absolute left-4 top-1/2 -translate-y-1/2"
+      aria-hidden="true"
+    >
+      <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />
+      <circle cx="12" cy="10" r="2.5" />
+    </svg>
+  );
+}
+
+/* =========================================================
+   PHOTON LOCATION AUTOCOMPLETE
+========================================================= */
+
+function LocationAutocomplete({
+  id,
+  label,
+  placeholder,
+  value,
+  onChange,
+}: LocationAutocompleteProps) {
+  const [suggestions, setSuggestions] =
+    useState<PhotonFeature[]>([]);
+
+  const [isOpen, setIsOpen] =
+    useState(false);
+
+  const [loading, setLoading] =
+    useState(false);
+
+  useEffect(() => {
+    const query = value.trim();
+
+    if (
+      !isOpen ||
+      query.length < 2
+    ) {
+      setSuggestions([]);
+      setLoading(false);
+      return;
+    }
+
+    const controller =
+      new AbortController();
+
+    const timeout =
+      window.setTimeout(
+        async () => {
+          try {
+            setLoading(true);
+
+            const params =
+              new URLSearchParams({
+                q: query,
+                limit: "6",
+                lang: "en",
+
+                // Sri Lanka only
+                countrycode: "LK",
+
+                // Sri Lanka centre location bias
+                lat: "7.8731",
+                lon: "80.7718",
+                zoom: "7",
+                location_bias_scale:
+                  "0.1",
+              });
+
+            const response =
+              await fetch(
+                `https://photon.komoot.io/api/?${params.toString()}`,
+                {
+                  method: "GET",
+                  signal:
+                    controller.signal,
+                }
+              );
+
+            if (!response.ok) {
+              throw new Error(
+                "Unable to load location suggestions."
+              );
+            }
+
+            const data =
+              (await response.json()) as PhotonResponse;
+
+            const features =
+              Array.isArray(
+                data.features
+              )
+                ? data.features
+                : [];
+
+            setSuggestions(
+              features.filter(
+                (feature) =>
+                  buildLocationLabel(
+                    feature
+                  ).trim() !== ""
+              )
+            );
+          } catch (error) {
+            if (
+              error instanceof
+                DOMException &&
+              error.name ===
+                "AbortError"
+            ) {
+              return;
+            }
+
+            console.error(
+              "Photon location search error:",
+              error
+            );
+
+            setSuggestions([]);
+          } finally {
+            if (
+              !controller.signal
+                .aborted
+            ) {
+              setLoading(false);
+            }
+          }
+        },
+        350
+      );
+
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [value, isOpen]);
+
+  function selectLocation(
+    feature: PhotonFeature
+  ) {
+    const location =
+      buildLocationLabel(feature);
+
+    if (!location) {
+      return;
+    }
+
+    onChange(location);
+    setSuggestions([]);
+    setIsOpen(false);
+  }
+
+  return (
+    <div>
+      <label
+        htmlFor={id}
+        className="mb-2 block text-[13px] font-bold text-[var(--text-primary)]"
+      >
+        {label}
+      </label>
+
+      <div className="relative">
+        <LocationIcon />
+
+        <Input
+          id={id}
+          className="pl-11"
+          placeholder={placeholder}
+          value={value}
+          autoComplete="off"
+          onFocus={() =>
+            setIsOpen(true)
+          }
+          onBlur={() => {
+            window.setTimeout(
+              () =>
+                setIsOpen(false),
+              150
+            );
+          }}
+          onChange={(event) => {
+            onChange(
+              event.target.value
+            );
+
+            setIsOpen(true);
+          }}
+        />
+
+        {isOpen &&
+          value.trim().length >=
+            2 && (
+            <div
+              className="
+                absolute
+                left-0
+                right-0
+                top-[calc(100%+6px)]
+                z-30
+                max-h-[280px]
+                overflow-y-auto
+                rounded-xl
+                border
+                border-[var(--border-light)]
+                bg-white
+                shadow-[0_15px_40px_rgba(0,0,0,0.12)]
+              "
+            >
+              {loading ? (
+                <div className="px-4 py-3 text-[13px] text-[var(--text-secondary)]">
+                  Searching locations...
+                </div>
+              ) : suggestions.length >
+                0 ? (
+                suggestions.map(
+                  (
+                    feature,
+                    index
+                  ) => {
+                    const location =
+                      buildLocationLabel(
+                        feature
+                      );
+
+                    return (
+                      <button
+                        key={`${location}-${index}`}
+                        type="button"
+                        onMouseDown={(
+                          event
+                        ) => {
+                          event.preventDefault();
+
+                          selectLocation(
+                            feature
+                          );
+                        }}
+                        className="
+                          block
+                          w-full
+                          border-b
+                          border-[var(--border-light)]
+                          px-4
+                          py-3
+                          text-left
+                          transition
+                          last:border-b-0
+                          hover:bg-[var(--green-primary)]/5
+                        "
+                      >
+                        <span className="block text-[13px] font-medium text-[var(--text-primary)]">
+                          {
+                            location
+                          }
+                        </span>
+                      </button>
+                    );
+                  }
+                )
+              ) : (
+                <div className="px-4 py-3 text-[13px] text-[var(--text-secondary)]">
+                  No Sri Lankan
+                  locations found.
+                </div>
+              )}
+            </div>
+          )}
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   PAGE
+========================================================= */
+
+export default function DayTourPage() {
+  const router = useRouter();
+
+  /* =======================================================
+     FORM STATE
+  ======================================================= */
 
   const [
     tourDate,
@@ -67,26 +436,6 @@ export default function DayTourPage() {
   ] = useState(1);
 
   const [
-    selectedPricingRoute,
-    setSelectedPricingRoute,
-  ] = useState("");
-
-  const [
-    pricingRoutes,
-    setPricingRoutes,
-  ] = useState<PricingRoute[]>([]);
-
-  const [
-    pricingRoutesLoading,
-    setPricingRoutesLoading,
-  ] = useState(true);
-
-  const [
-    pricingRouteError,
-    setPricingRouteError,
-  ] = useState("");
-
-  const [
     vehicleSearch,
     setVehicleSearch,
   ] = useState("");
@@ -94,15 +443,19 @@ export default function DayTourPage() {
   const [
     selectedVehicleId,
     setSelectedVehicleId,
-  ] =
-    useState<number | null>(
-      null
-    );
+  ] = useState<number | null>(
+    null
+  );
+
+  const [
+    vehicleDropdownOpen,
+    setVehicleDropdownOpen,
+  ] = useState(false);
 
   const [
     luggage,
     setLuggage,
-  ] = useState("");
+  ] = useState("0");
 
   const [
     meetingLocation,
@@ -127,8 +480,7 @@ export default function DayTourPage() {
   const [
     vehicles,
     setVehicles,
-  ] =
-    useState<Vehicle[]>([]);
+  ] = useState<Vehicle[]>([]);
 
   const [
     loadingVehicles,
@@ -140,9 +492,9 @@ export default function DayTourPage() {
     setVehicleError,
   ] = useState("");
 
-  // ==========================================
-  // LOAD SAVED DAY TOUR DRAFT
-  // ==========================================
+  /* =======================================================
+     LOAD SAVED DAY TOUR DRAFT
+  ======================================================= */
 
   useEffect(() => {
     const draft =
@@ -166,12 +518,6 @@ export default function DayTourPage() {
     ) {
       setPassengers(
         draft.passengerCount
-      );
-    }
-
-    if (draft.pricingId) {
-      setSelectedPricingRoute(
-        String(draft.pricingId)
       );
     }
 
@@ -220,7 +566,8 @@ export default function DayTourPage() {
 
     if (
       draft.destinations &&
-      draft.destinations.length > 0
+      draft.destinations
+        .length > 0
     ) {
       setTourDestination(
         draft.destinations[0]
@@ -236,93 +583,12 @@ export default function DayTourPage() {
     }
   }, []);
 
-  // ==========================================
-  // LOAD PRICING ROUTES FROM DATABASE
-  // ==========================================
+  /* =======================================================
+     LOAD VEHICLES FROM DATABASE
+  ======================================================= */
 
   useEffect(() => {
-    let cancelled =
-      false;
-
-    async function loadPricingRoutes() {
-      try {
-        setPricingRoutesLoading(
-          true
-        );
-
-        setPricingRouteError("");
-
-        const response =
-          await fetch(
-            "/api/pricing-routes",
-            {
-              method: "GET",
-              cache: "no-store",
-            }
-          );
-
-        const data =
-          await response.json();
-
-        if (!response.ok) {
-          if (!cancelled) {
-            setPricingRouteError(
-              data.error ||
-                "Unable to load pricing routes."
-            );
-          }
-
-          return;
-        }
-
-        const loadedRoutes: PricingRoute[] =
-          Array.isArray(
-            data.routes
-          )
-            ? data.routes
-            : [];
-
-        if (!cancelled) {
-          setPricingRoutes(
-            loadedRoutes
-          );
-        }
-      } catch (error) {
-        console.error(
-          "Load pricing routes error:",
-          error
-        );
-
-        if (!cancelled) {
-          setPricingRouteError(
-            "Unable to load pricing routes."
-          );
-
-          setPricingRoutes([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setPricingRoutesLoading(
-            false
-          );
-        }
-      }
-    }
-
-    void loadPricingRoutes();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // ==========================================
-  // LOAD VEHICLES FROM DATABASE
-  // ==========================================
-
-  useEffect(() => {
-    let cancelled =
-      false;
+    let cancelled = false;
 
     async function loadVehicles() {
       try {
@@ -382,7 +648,9 @@ export default function DayTourPage() {
                   draft.vehicleTypeId
               );
 
-            if (savedVehicle) {
+            if (
+              savedVehicle
+            ) {
               setSelectedVehicleId(
                 savedVehicle.id
               );
@@ -403,6 +671,8 @@ export default function DayTourPage() {
           setVehicleError(
             "Unable to load vehicles."
           );
+
+          setVehicles([]);
         }
       } finally {
         if (!cancelled) {
@@ -420,9 +690,9 @@ export default function DayTourPage() {
     };
   }, []);
 
-  // ==========================================
-  // VEHICLE SEARCH
-  // ==========================================
+  /* =======================================================
+     VEHICLE SEARCH
+  ======================================================= */
 
   const filteredVehicles =
     useMemo(() => {
@@ -474,50 +744,21 @@ export default function DayTourPage() {
         selectedVehicleId
     ) ?? null;
 
-  // ==========================================
-  // ROUTE SELECTION
-  // ==========================================
+  /*
+   * If a vehicle is already selected,
+   * focusing the field should still
+   * show the whole vehicle list.
+   */
+  const vehicleDropdownItems =
+    selectedVehicle &&
+    vehicleSearch ===
+      selectedVehicle.name
+      ? vehicles
+      : filteredVehicles;
 
-  const handlePricingRouteChange = (
-    event: React.ChangeEvent<HTMLSelectElement>
-  ) => {
-    const value =
-      event.target.value;
-
-    setSelectedPricingRoute(
-      value
-    );
-
-    const route =
-      pricingRoutes.find(
-        (pricingRoute) =>
-          String(pricingRoute.id) ===
-          value
-      );
-
-    if (!route) {
-      setMeetingLocation("");
-      setTourDestination("");
-      setDropLocation("");
-      return;
-    }
-
-    setMeetingLocation(
-      route.fromLocation
-    );
-
-    setTourDestination(
-      route.toLocation
-    );
-
-    setDropLocation(
-      route.fromLocation
-    );
-  };
-
-  // ==========================================
-  // PASSENGER CONTROLS
-  // ==========================================
+  /* =======================================================
+     PASSENGER CONTROLS
+  ======================================================= */
 
   const increasePassengers =
     () => {
@@ -539,7 +780,7 @@ export default function DayTourPage() {
     };
 
   const handlePassengerInput = (
-    event: React.ChangeEvent<HTMLInputElement>
+    event: ChangeEvent<HTMLInputElement>
   ) => {
     const value =
       event.target.value;
@@ -564,22 +805,79 @@ export default function DayTourPage() {
     }
   };
 
-  // ==========================================
-  // CONTINUE
-  // ==========================================
+  /* =======================================================
+     LUGGAGE CONTROLS
+  ======================================================= */
 
-  function handleContinue() {
-    if (!tourDate) {
-      window.alert(
-        "Please select your tour date."
+  const increaseLuggage =
+    () => {
+      setLuggage(
+        (current) =>
+          String(
+            (Number(current) ||
+              0) + 1
+          )
       );
+    };
 
+  const decreaseLuggage =
+    () => {
+      setLuggage(
+        (current) =>
+          String(
+            Math.max(
+              0,
+              (Number(
+                current
+              ) || 0) - 1
+            )
+          )
+      );
+    };
+
+  const handleLuggageInput = (
+    event: ChangeEvent<HTMLInputElement>
+  ) => {
+    const value =
+      event.target.value;
+
+    if (value === "") {
+      setLuggage("");
       return;
     }
 
-    if (!selectedPricingRoute) {
+    /*
+     * Only allow whole-number digits.
+     */
+    if (!/^\d+$/.test(value)) {
+      return;
+    }
+
+    setLuggage(
+      String(
+        Math.max(
+          0,
+          Math.floor(
+            Number(value)
+          )
+        )
+      )
+    );
+  };
+
+  /* =======================================================
+     CONTINUE
+  ======================================================= */
+
+  function handleContinue() {
+    if (tourDate && tourDate < earliestBookingDate()) {
+      window.alert("Bookings must be made at least two calendar days ahead.");
+      return;
+    }
+
+    if (!tourDate) {
       window.alert(
-        "Please select a day tour route."
+        "Please select your tour date."
       );
 
       return;
@@ -589,7 +887,7 @@ export default function DayTourPage() {
       !meetingLocation.trim()
     ) {
       window.alert(
-        "Please enter your meeting location."
+        "Please enter your pickup location."
       );
 
       return;
@@ -625,7 +923,7 @@ export default function DayTourPage() {
 
     if (luggage === "") {
       window.alert(
-        "Please select the luggage count."
+        "Please enter the luggage count."
       );
 
       return;
@@ -660,8 +958,10 @@ export default function DayTourPage() {
       serviceType:
         "DAY_TOUR",
 
-      pricingId:
-        Number(selectedPricingRoute),
+      /*
+       * Day Tour no longer
+       * requires a pricing route.
+       */
 
       vehicleTypeId:
         selectedVehicle.id,
@@ -700,8 +1000,9 @@ export default function DayTourPage() {
       ],
 
       /*
-       * New trip = remove old calculated
-       * price and old booking reference.
+       * New trip:
+       * clear values calculated
+       * by an older booking.
        */
       actualKilometres:
         undefined,
@@ -727,11 +1028,16 @@ export default function DayTourPage() {
     );
   }
 
+  /* =======================================================
+     UI
+  ======================================================= */
+
   return (
     <BookingPageShell>
-      {/* ==========================================
+      {/* ===================================================
           SERVICE / PAGE INTRO
-      ========================================== */}
+      =================================================== */}
+
       <section className="relative overflow-hidden bg-[#F4F7F1]">
         <DecorativePattern position="top-right" />
 
@@ -750,14 +1056,11 @@ export default function DayTourPage() {
             md:pt-12
           "
         >
-          {/* Service Tabs */}
           <div>
             <ServiceTabs active="day-tour" />
           </div>
 
-          {/* Page Introduction */}
           <div className="mx-auto mt-12 max-w-[760px] text-center">
-            {/* Eyebrow */}
             <span
               className="
                 text-sm
@@ -770,7 +1073,6 @@ export default function DayTourPage() {
               Day Tours
             </span>
 
-            {/* Heading */}
             <h1
               className="
                 mt-2
@@ -785,7 +1087,6 @@ export default function DayTourPage() {
               Discover More in a Day
             </h1>
 
-            {/* Description */}
             <p
               className="
                 mx-auto
@@ -797,19 +1098,23 @@ export default function DayTourPage() {
                 text-gray-500
               "
             >
-              Explore the beauty, culture, and hidden gems of Sri Lanka with
-              a comfortable private vehicle and an experienced chauffeur.
+              Explore the beauty,
+              culture, and hidden gems
+              of Sri Lanka with a
+              comfortable private
+              vehicle and an
+              experienced chauffeur.
             </p>
 
-            {/* Service Colour Indicator */}
             <ServiceColorDashes active="day-tour" />
           </div>
         </div>
       </section>
 
-      {/* ==========================================
+      {/* ===================================================
           BOOKING STEP HEADER
-      ========================================== */}
+      =================================================== */}
+
       <section className="bg-white">
         <div className="border-b border-[var(--border-light)]">
           <div className="mx-auto w-full max-w-[1280px] px-6 py-6 md:px-10">
@@ -822,13 +1127,15 @@ export default function DayTourPage() {
         </div>
       </section>
 
-      {/* ==========================================
+      {/* ===================================================
           FORM AREA
-      ========================================== */}
-      <section className="relative overflow-hidden bg-[#F8F7F1] py-10">
+      =================================================== */}
 
+      <section className="relative overflow-hidden bg-[#F8F7F1] py-10">
         <div className="relative z-10 mx-auto w-full max-w-[1280px] px-6 md:px-10">
           <div className="mt-1 space-y-8">
+
+            {/* VEHICLE ERROR */}
 
             {vehicleError && (
               <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[12px] font-semibold text-red-700">
@@ -836,17 +1143,14 @@ export default function DayTourPage() {
               </div>
             )}
 
-            {pricingRouteError && (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[12px] font-semibold text-red-700">
-                {pricingRouteError}
-              </div>
-            )}
-
-            {/* ==========================================
+            {/* =============================================
                 DATE + PASSENGERS
-            ========================================== */}
+            ============================================= */}
+
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              {/* Tour Date */}
+
+              {/* TOUR DATE */}
+
               <div>
                 <label
                   htmlFor="tour-date"
@@ -859,16 +1163,15 @@ export default function DayTourPage() {
                   id="tour-date"
                   type="date"
                   value={tourDate}
-                  onChange={(event) =>
+                  onChange={(
+                    event
+                  ) =>
                     setTourDate(
-                      event.target.value
+                      event.target
+                        .value
                     )
                   }
-                  min={
-                    new Date()
-                      .toISOString()
-                      .split("T")[0]
-                  }
+                  min={earliestBookingDate()}
                   className="
                     h-[48px]
                     w-full
@@ -888,14 +1191,16 @@ export default function DayTourPage() {
                 />
               </div>
 
-              {/* Number of Passengers */}
+              {/* PASSENGERS */}
+
               <div>
                 <label className="mb-2 block text-[13px] font-bold text-[var(--text-primary)]">
-                  Number of Passengers
+                  Number of
+                  Passengers
                 </label>
 
                 <div className="flex h-[48px] w-full items-center rounded-md border border-[var(--border-light)] bg-white">
-                  {/* Minus */}
+
                   <button
                     type="button"
                     onClick={
@@ -923,10 +1228,11 @@ export default function DayTourPage() {
                     −
                   </button>
 
-                  {/* Number Input */}
                   <input
                     type="number"
                     min="1"
+                    step="1"
+                    inputMode="numeric"
                     value={
                       passengers
                     }
@@ -948,7 +1254,6 @@ export default function DayTourPage() {
                     aria-label="Number of passengers"
                   />
 
-                  {/* Plus */}
                   <button
                     type="button"
                     onClick={
@@ -974,337 +1279,518 @@ export default function DayTourPage() {
               </div>
             </div>
 
-            {/* ==========================================
-                DAY TOUR ROUTE
-            ========================================== */}
-            <Select
-              label="Day Tour Route"
-              placeholder={
-                pricingRoutesLoading
-                  ? "Loading day tour routes..."
-                  : "Select Day Tour Route"
+            {/* =============================================
+                PICKUP LOCATION - PHOTON
+            ============================================= */}
+
+            <LocationAutocomplete
+              id="meeting-location"
+              label="Meeting / Pickup Location"
+              placeholder="Start typing your hotel or pickup location"
+              value={
+                meetingLocation
               }
-              value={selectedPricingRoute}
-              onChange={handlePricingRouteChange}
-              options={pricingRoutes.map((route) => ({
-                label: `${route.fromLocation} → ${route.toLocation}`,
-                value: String(route.id),
-              }))}
+              onChange={
+                setMeetingLocation
+              }
             />
 
-            {!pricingRoutesLoading && pricingRoutes.length === 0 && (
-              <p className="mt-2 text-[12px] font-medium text-red-600">
-                No active day tour routes found. Please add an active route in Admin Pricing.
-              </p>
-            )}
+            {/* =============================================
+                MAIN TOUR DESTINATION - PHOTON
+                ============================================= */}
 
-            {/* ==========================================
-                MEETING LOCATION
-            ========================================== */}
-            <div>
-              <label
-                htmlFor="meeting-location"
-                className="mb-2 block text-[13px] font-bold text-[var(--text-primary)]"
-              >
-                Meeting / Pickup Location
-              </label>
-
-              <div className="relative">
-                <svg
-                  viewBox="0 0 24 24"
-                  width="17"
-                  height="17"
-                  fill="none"
-                  stroke="var(--green-primary)"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="absolute left-4 top-1/2 -translate-y-1/2"
-                  aria-hidden="true"
-                >
-                  <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />
-
-                  <circle
-                    cx="12"
-                    cy="10"
-                    r="2.5"
-                  />
-                </svg>
-
-                <Input
-                  id="meeting-location"
-                  className="pl-11"
-                  placeholder="Enter your hotel or pickup location"
-                  value={
-                    meetingLocation
-                  }
-                  onChange={(event) =>
-                    setMeetingLocation(
-                      event.target.value
-                    )
-                  }
-                />
-              </div>
-            </div>
-
-            {/* ==========================================
-                TOUR DESTINATION
-            ========================================== */}
-            <div>
-              <label
-                htmlFor="tour-destination"
-                className="mb-2 block text-[13px] font-bold text-[var(--text-primary)]"
-              >
-                Main Tour Destination
-              </label>
-
-              <div className="relative">
-                <svg
-                  viewBox="0 0 24 24"
-                  width="17"
-                  height="17"
-                  fill="none"
-                  stroke="var(--green-primary)"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="absolute left-4 top-1/2 -translate-y-1/2"
-                  aria-hidden="true"
-                >
-                  <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />
-
-                  <circle
-                    cx="12"
-                    cy="10"
-                    r="2.5"
-                  />
-                </svg>
-
-                <Input
+                <LocationAutocomplete
                   id="tour-destination"
-                  className="pl-11"
-                  placeholder="e.g., Galle Fort, Kandy, Sigiriya"
-                  value={
-                    tourDestination
-                  }
-                  onChange={(event) =>
-                    setTourDestination(
-                      event.target.value
-                    )
-                  }
+                  label="Main Tour Destination"
+                  placeholder="Start typing a destination, e.g. Sigiriya, Kandy, Galle Fort"
+                  value={tourDestination}
+                  onChange={setTourDestination}
                 />
-              </div>
-            </div>
+            {/* =============================================
+                DROP LOCATION - PHOTON
+            ============================================= */}
 
-            {/* ==========================================
-                RETURN / DROP LOCATION
-            ========================================== */}
-            <div>
-              <label
-                htmlFor="drop-location"
-                className="mb-2 block text-[13px] font-bold text-[var(--text-primary)]"
-              >
-                Return / Drop Location
-              </label>
+            <LocationAutocomplete
+              id="drop-location"
+              label="Return / Drop Location"
+              placeholder="Start typing your return or final drop location"
+              value={
+                dropLocation
+              }
+              onChange={
+                setDropLocation
+              }
+            />
 
-              <div className="relative">
-                <svg
-                  viewBox="0 0 24 24"
-                  width="17"
-                  height="17"
-                  fill="none"
-                  stroke="var(--green-primary)"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="absolute left-4 top-1/2 -translate-y-1/2"
-                  aria-hidden="true"
-                >
-                  <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />
+            {/* =============================================
+    VEHICLE SEARCH
+============================================= */}
 
-                  <circle
-                    cx="12"
-                    cy="10"
-                    r="2.5"
-                  />
-                </svg>
+<div>
+  <label
+    htmlFor="vehicle-search"
+    className="mb-2 block text-[13px] font-bold text-[var(--text-primary)]"
+  >
+    Selected Vehicle Preference
+  </label>
 
-                <Input
-                  id="drop-location"
-                  className="pl-11"
-                  placeholder="Enter return or final drop location"
-                  value={
-                    dropLocation
-                  }
-                  onChange={(event) =>
-                    setDropLocation(
-                      event.target.value
-                    )
-                  }
-                />
-              </div>
-            </div>
+  {loadingVehicles ? (
+    <div className="rounded-md border border-[var(--border-light)] bg-white px-4 py-4 text-[13px] text-[var(--text-secondary)]">
+      Loading available vehicles...
+    </div>
+  ) : (
+    <div className="relative">
+      <Input
+        id="vehicle-search"
+        placeholder="Search vehicle or fleet class..."
+        value={vehicleSearch}
+        autoComplete="off"
+        onFocus={() =>
+          setVehicleDropdownOpen(true)
+        }
+        onBlur={() => {
+          window.setTimeout(
+            () =>
+              setVehicleDropdownOpen(
+                false
+              ),
+            150
+          );
+        }}
+        onChange={(event) => {
+          setVehicleSearch(
+            event.target.value
+          );
 
-            {/* ==========================================
-                VEHICLE SEARCH
-            ========================================== */}
-            <div>
-              <label
-                htmlFor="vehicle-search"
-                className="mb-2 block text-[13px] font-bold text-[var(--text-primary)]"
-              >
-                Selected Vehicle Preference
-              </label>
+          /*
+           * User changed the text,
+           * so clear the previously
+           * selected vehicle.
+           */
+          setSelectedVehicleId(
+            null
+          );
 
-              {loadingVehicles ? (
-                <div className="rounded-md border border-[var(--border-light)] bg-white px-4 py-4 text-[13px] text-[var(--text-secondary)]">
-                  Loading available vehicles...
-                </div>
-              ) : (
-                <div className="relative">
-                  <Input
-                    id="vehicle-search"
-                    placeholder="Search vehicle or fleet class..."
-                    value={
-                      vehicleSearch
-                    }
-                    onChange={(event) => {
-                      setVehicleSearch(
-                        event.target.value
-                      );
+          setVehicleDropdownOpen(
+            true
+          );
+        }}
+      />
+
+      {/* =======================================
+          VEHICLE DROPDOWN
+      ======================================= */}
+
+      {vehicleDropdownOpen && (
+        <div
+          className="
+            absolute
+            left-0
+            right-0
+            top-[calc(100%+6px)]
+            z-20
+            max-h-[340px]
+            overflow-y-auto
+            overflow-x-hidden
+            rounded-xl
+            border
+            border-[var(--border-light)]
+            bg-white
+            shadow-[0_15px_40px_rgba(0,0,0,0.12)]
+          "
+        >
+          {vehicleDropdownItems.length >
+          0 ? (
+            vehicleDropdownItems.map(
+              (vehicle) => {
+                const category =
+                  [
+                    vehicle.transmission,
+                    vehicle.fuelType,
+                  ]
+                    .filter(Boolean)
+                    .join(" • ") ||
+                  vehicle.description ||
+                  "Available Vehicle";
+
+                return (
+                  <button
+                    key={vehicle.id}
+                    type="button"
+                    onMouseDown={(
+                      event
+                    ) => {
+                      event.preventDefault();
 
                       setSelectedVehicleId(
-                        null
+                        vehicle.id
+                      );
+
+                      setVehicleSearch(
+                        vehicle.name
+                      );
+
+                      setVehicleDropdownOpen(
+                        false
                       );
                     }}
-                  />
+                    className="
+                      block
+                      w-full
+                      border-b
+                      border-[var(--border-light)]
+                      px-4
+                      py-3.5
+                      text-left
+                      transition
+                      last:border-b-0
+                      hover:bg-[var(--green-primary)]/5
+                    "
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 
-                  {/* Suggestions */}
-                  {vehicleSearch.trim() !==
-                    "" &&
-                    !selectedVehicle && (
-                      <div
-                        className="
-                          absolute
-                          left-0
-                          right-0
-                          top-[calc(100%+6px)]
-                          z-20
-                          overflow-hidden
-                          rounded-xl
-                          border
-                          border-[var(--border-light)]
-                          bg-white
-                          shadow-[0_15px_40px_rgba(0,0,0,0.12)]
-                        "
-                      >
-                        {filteredVehicles.length >
-                        0 ? (
-                          filteredVehicles.map(
-                            (
-                              vehicle
-                            ) => (
-                              <button
-                                key={
-                                  vehicle.id
-                                }
-                                type="button"
-                                onClick={() => {
-                                  setSelectedVehicleId(
-                                    vehicle.id
-                                  );
+                      {/* LEFT SIDE */}
 
-                                  setVehicleSearch(
-                                    vehicle.name
-                                  );
-                                }}
-                                className="
-                                  flex
-                                  w-full
-                                  items-center
-                                  justify-between
-                                  px-4
-                                  py-3
-                                  text-left
-                                  transition
-                                  hover:bg-[var(--green-primary)]/5
-                                "
-                              >
-                                <span className="text-[14px] font-medium text-[var(--text-primary)]">
-                                  {
-                                    vehicle.name
-                                  }
-                                </span>
+                      <div className="min-w-0">
+                        <p className="text-[14px] font-semibold text-[var(--text-primary)]">
+                          {vehicle.name}
+                        </p>
 
-                                <span className="text-[12px] text-[var(--text-secondary)]">
-                                  {vehicle.transmission ??
-                                    vehicle.fuelType ??
-                                    "Available Vehicle"}
-                                </span>
-                              </button>
-                            )
-                          )
-                        ) : (
-                          <div className="px-4 py-3 text-[13px] text-[var(--text-secondary)]">
-                            No vehicles found.
-                          </div>
-                        )}
+                        <p className="mt-1 text-[11px] text-[var(--text-secondary)]">
+                          {category}
+                        </p>
                       </div>
-                    )}
-                </div>
-              )}
 
-              {/* Selected Vehicle */}
-              {selectedVehicle && (
-                <p className="mt-2 text-[12px] text-[var(--text-secondary)]">
-                  Vehicle selected: {" "}
-                  <span className="font-semibold text-[var(--text-primary)]">
-                    {vehicleSearch}
-                  </span>
-                </p>
-              )}
+                      {/* RIGHT SIDE - CAPACITY */}
+
+                      <div className="flex shrink-0 flex-wrap items-center gap-2">
+
+                        {/* PASSENGER CAPACITY */}
+
+                        <div
+                          className="
+                            flex
+                            items-center
+                            gap-1.5
+                            rounded-md
+                            bg-[var(--green-primary)]/10
+                            px-2.5
+                            py-1.5
+                            text-[11px]
+                            font-semibold
+                            text-[var(--green-primary)]
+                          "
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            width="14"
+                            height="14"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <circle
+                              cx="12"
+                              cy="8"
+                              r="3"
+                            />
+
+                            <path d="M6 21v-2a6 6 0 0 1 12 0v2" />
+                          </svg>
+
+                          <span>
+                            {
+                              vehicle.passengerCapacity
+                            }{" "}
+                            Passengers
+                          </span>
+                        </div>
+
+                        {/* LUGGAGE CAPACITY */}
+
+                        <div
+                          className="
+                            flex
+                            items-center
+                            gap-1.5
+                            rounded-md
+                            bg-[#F6E9B6]
+                            px-2.5
+                            py-1.5
+                            text-[11px]
+                            font-semibold
+                            text-[var(--text-primary)]
+                          "
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            width="14"
+                            height="14"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <rect
+                              x="5"
+                              y="7"
+                              width="14"
+                              height="13"
+                              rx="2"
+                            />
+
+                            <path d="M9 7V5a3 3 0 0 1 6 0v2" />
+
+                            <path d="M9 12v3" />
+
+                            <path d="M15 12v3" />
+                          </svg>
+
+                          <span>
+                            {
+                              vehicle.luggageCapacity
+                            }{" "}
+                            Luggage
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              }
+            )
+          ) : (
+            <div className="px-4 py-3 text-[13px] text-[var(--text-secondary)]">
+              No vehicles found.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )}
+
+  {/* ===========================================
+      SELECTED VEHICLE SUMMARY
+  =========================================== */}
+
+  {selectedVehicle && (
+    <div className="mt-3 rounded-lg border border-[var(--border-light)] bg-white px-4 py-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+
+        {/* VEHICLE NAME */}
+
+        <div>
+          <p className="text-[11px] font-medium text-[var(--text-secondary)]">
+            Vehicle selected
+          </p>
+
+          <p className="mt-0.5 text-[13px] font-semibold text-[var(--text-primary)]">
+            {selectedVehicle.name}
+          </p>
+        </div>
+
+        {/* CAPACITY BADGES */}
+
+        <div className="flex flex-wrap gap-2">
+
+          {/* PASSENGER CAPACITY */}
+
+          <div
+            className="
+              flex
+              items-center
+              gap-1.5
+              rounded-md
+              bg-[var(--green-primary)]/10
+              px-2.5
+              py-1.5
+              text-[11px]
+              font-semibold
+              text-[var(--green-primary)]
+            "
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="14"
+              height="14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle
+                cx="12"
+                cy="8"
+                r="3"
+              />
+
+              <path d="M6 21v-2a6 6 0 0 1 12 0v2" />
+            </svg>
+
+            <span>
+              Max{" "}
+              {
+                selectedVehicle.passengerCapacity
+              }{" "}
+              passengers
+            </span>
+          </div>
+
+          {/* LUGGAGE CAPACITY */}
+
+          <div
+            className="
+              flex
+              items-center
+              gap-1.5
+              rounded-md
+              bg-[#F6E9B6]
+              px-2.5
+              py-1.5
+              text-[11px]
+              font-semibold
+              text-[var(--text-primary)]
+            "
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="14"
+              height="14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <rect
+                x="5"
+                y="7"
+                width="14"
+                height="13"
+                rx="2"
+              />
+
+              <path d="M9 7V5a3 3 0 0 1 6 0v2" />
+
+              <path d="M9 12v3" />
+
+              <path d="M15 12v3" />
+            </svg>
+
+            <span>
+              Max{" "}
+              {
+                selectedVehicle.luggageCapacity
+              }{" "}
+              luggage
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
+</div>
+
+            {/* =============================================
+                LUGGAGE
+            ============================================= */}
+
+            <div>
+              <label className="mb-2 block text-[13px] font-bold text-[var(--text-primary)]">
+                Luggage Requirements
+              </label>
+
+              <div className="flex h-[48px] w-full items-center rounded-md border border-[var(--border-light)] bg-white">
+
+                <button
+                  type="button"
+                  onClick={
+                    decreaseLuggage
+                  }
+                  disabled={
+                    Number(
+                      luggage
+                    ) <= 0
+                  }
+                  className="
+                    flex
+                    h-full
+                    w-14
+                    items-center
+                    justify-center
+                    text-[22px]
+                    font-medium
+                    text-[var(--text-primary)]
+                    transition
+                    hover:bg-[var(--green-primary)]/5
+                    disabled:cursor-not-allowed
+                    disabled:opacity-40
+                  "
+                  aria-label="Decrease luggage"
+                >
+                  −
+                </button>
+
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputMode="numeric"
+                  value={luggage}
+                  onChange={
+                    handleLuggageInput
+                  }
+                  className="
+                    h-full
+                    flex-1
+                    border-x
+                    border-[var(--border-light)]
+                    bg-transparent
+                    text-center
+                    text-[15px]
+                    font-semibold
+                    text-[var(--text-primary)]
+                    outline-none
+                  "
+                  aria-label="Number of luggage items"
+                />
+
+                <button
+                  type="button"
+                  onClick={
+                    increaseLuggage
+                  }
+                  className="
+                    flex
+                    h-full
+                    w-14
+                    items-center
+                    justify-center
+                    text-[22px]
+                    font-medium
+                    text-[var(--text-primary)]
+                    transition
+                    hover:bg-[var(--green-primary)]/5
+                  "
+                  aria-label="Increase luggage"
+                >
+                  +
+                </button>
+              </div>
             </div>
 
-            {/* ==========================================
-                LUGGAGE
-            ========================================== */}
-            <Select
-              label="Luggage Requirements"
-              placeholder="Select Bag Count"
-              value={luggage}
-              onChange={(event) =>
-                setLuggage(
-                  event.target.value
-                )
-              }
-              options={[
-                {
-                  label:
-                    "No Luggage",
-                  value: "0",
-                },
-                {
-                  label: "1 Bag",
-                  value: "1",
-                },
-                {
-                  label: "2 Bags",
-                  value: "2",
-                },
-                {
-                  label: "3 Bags",
-                  value: "3",
-                },
-                {
-                  label: "4+ Bags",
-                  value: "4",
-                },
-              ]}
-            />
-
-            {/* ==========================================
+            {/* =============================================
                 SPECIAL REQUIREMENTS
-            ========================================== */}
+            ============================================= */}
+
             <Textarea
               label="Special Requirements"
               placeholder="Specify preferred start time, extra stops, or any other requirements..."
@@ -1318,17 +1804,17 @@ export default function DayTourPage() {
               }
             />
 
-            {/* ==========================================
-                CONTINUE BUTTON
-            ========================================== */}
+            {/* =============================================
+                CONTINUE
+            ============================================= */}
+
             <div className="flex justify-end pt-1">
               <Button
                 onClick={
                   handleContinue
                 }
                 disabled={
-                  loadingVehicles ||
-                  pricingRoutesLoading
+                  loadingVehicles
                 }
                 className="min-w-[190px] px-6 py-3"
               >

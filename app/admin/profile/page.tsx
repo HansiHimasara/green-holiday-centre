@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 
 import AdminPageLayout from "@/components/admin/AdminPageLayout";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
@@ -18,14 +18,7 @@ type Profile = {
 };
 
 const initialProfile: Profile = {
-  fullName: "Super Admin",
-  username: "super_admin_gh",
-  email: "admin@greenholiday.lk",
-  phone: "+94 77 123 4567",
-  role: "System Administrator",
-  lastLogin: "22 Jun 2026, 09:15 AM",
-  status: "Active",
-  photo: null,
+  fullName: "", username: "", email: "", phone: "", role: "", lastLogin: "", status: "Active", photo: null,
 };
 
 export default function AdminProfilePage() {
@@ -35,6 +28,15 @@ export default function AdminProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [message, setMessage] = useState("");
 
+  useEffect(() => {
+    void fetch("/api/auth/me", { cache: "no-store" }).then(async response => {
+      if (!response.ok) return;
+      const { user } = await response.json();
+      const loaded: Profile = { fullName: user.fullName, username: user.username || "", email: user.email,
+        phone: user.phone || "", role: user.role, lastLogin: user.lastLoginAt || "", status: "Active", photo: user.profileImageUrl || null };
+      setProfile(loaded); setEditingProfile(loaded);
+    });
+  }, []);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const inputClasses =
@@ -52,7 +54,7 @@ export default function AdminProfilePage() {
     setMessage("");
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (
       !editingProfile.fullName.trim() ||
       !editingProfile.username.trim() ||
@@ -63,6 +65,8 @@ export default function AdminProfilePage() {
       return;
     }
 
+    const response = await fetch("/api/auth/me", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(editingProfile) });
+    if (!response.ok) { setMessage((await response.json()).error || "Unable to save profile."); return; }
     setProfile(editingProfile);
     setIsEditing(false);
     setMessage("Profile details updated successfully.");
@@ -87,14 +91,7 @@ export default function AdminProfilePage() {
       return;
     }
 
-    const imageUrl = URL.createObjectURL(file);
-
-    setEditingProfile((current) => ({
-      ...current,
-      photo: imageUrl,
-    }));
-
-    setMessage("");
+    setMessage("Profile photo upload requires a configured image storage service.");
   };
 
   const displayedProfile = isEditing

@@ -17,151 +17,29 @@ type Backup = {
   status: BackupStatus;
 };
 
-const initialBackups: Backup[] = [
-  {
-    id: 1,
-    date: "Jun 22, 2026 - 03:00 AM",
-    size: "412 MB",
-    type: "Automatic Backup",
-    status: "successful",
-  },
-  {
-    id: 2,
-    date: "Jun 21, 2026 - 03:00 AM",
-    size: "410 MB",
-    type: "Automatic Backup",
-    status: "successful",
-  },
-  {
-    id: 3,
-    date: "Jun 20, 2026 - 03:00 AM",
-    size: "408 MB",
-    type: "Automatic Backup",
-    status: "successful",
-  },
-];
-
 export default function AdminBackupPage() {
   const [backups, setBackups] =
-    useState<Backup[]>(initialBackups);
+    useState<Backup[]>([]);
 
   const [message, setMessage] =
     useState("");
 
-  const [isLoaded, setIsLoaded] =
-    useState(false);
-
-  /*
-   * Load saved backups
-   */
-  useEffect(() => {
-    const savedBackups =
-      localStorage.getItem(
-        "green-holiday-backups",
-      );
-
-    if (savedBackups) {
-      try {
-        const parsedBackups =
-          JSON.parse(savedBackups) as Backup[];
-
-        setBackups(parsedBackups);
-      } catch {
-        localStorage.removeItem(
-          "green-holiday-backups",
-        );
-      }
-    }
-
-    setIsLoaded(true);
-  }, []);
-
-  /*
-   * Save backups
-   */
-  useEffect(() => {
-    if (!isLoaded) return;
-
-    localStorage.setItem(
-      "green-holiday-backups",
-      JSON.stringify(backups),
-    );
-  }, [backups, isLoaded]);
-
   const latestBackup = backups[0];
-
-  /*
-   * Format date
-   */
-  const formatDate = (date: Date) => {
-    return date.toLocaleString("en-US", {
-      month: "short",
-      day: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
-  };
-
-  /*
-   * Create Backup
-   */
-  const handleCreateBackup = () => {
-    const now = new Date();
-
-    const newId =
-      backups.length > 0
-        ? Math.max(
-            ...backups.map(
-              (backup) => backup.id,
-            ),
-          ) + 1
-        : 1;
-
-    const newBackup: Backup = {
-      id: newId,
-      date: formatDate(now),
-      size: "415 MB",
-      type: "Manual Backup",
-      status: "successful",
-    };
-
-    setBackups((currentBackups) => [
-      newBackup,
-      ...currentBackups,
-    ]);
-
-    setMessage(
-      "Backup created successfully.",
-    );
-  };
-
-  /*
-   * Restore Backup
-   */
-  const handleRestore = (id: number) => {
-    const backup = backups.find(
-      (item) => item.id === id,
-    );
-
-    if (!backup) return;
-
-    setBackups((currentBackups) =>
-      currentBackups.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              status: "restored",
-            }
-          : item,
-      ),
-    );
-
-    setMessage(
-      `Data restored from ${backup.date}.`,
-    );
-  };
+  async function handleCreateBackup() {
+    const response = await fetch("/api/admin/backup", { cache: "no-store" });
+    if (!response.ok) { setMessage("Unable to export business data."); return; }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `green-holiday-data-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setMessage("Business data export downloaded. Configure automated database backups and restoration in your Postgres provider.");
+  }
+  function handleRestore(_id: number) {
+    setMessage("Restore must be performed from a verified database backup in your Postgres provider.");
+  }
 
   return (
     <AdminPageLayout sectionTitle="System Backups">
@@ -209,13 +87,13 @@ export default function AdminBackupPage() {
                   {latestBackup?.status ===
                   "restored"
                     ? "Backup restored successfully"
-                    : "Automatic backup completed successfully"}
+                    : "No verified database backup is connected"}
                 </p>
               </div>
             </div>
 
             <div className="flex flex-wrap gap-3">
-              {/* Create Backup */}
+              {/* Download Data Export */}
               <button
                 type="button"
                 onClick={handleCreateBackup}
@@ -237,7 +115,7 @@ export default function AdminBackupPage() {
                   hover:bg-[var(--green-primary)]
                 "
               >
-                Create Backup
+                Download Data Export
               </button>
 
               {/* Restore Latest */}
@@ -425,8 +303,7 @@ export default function AdminBackupPage() {
                     </p>
 
                     <p className="mt-1 text-[11px] text-[var(--text-muted)]">
-                      Create a backup to add a
-                      restore point.
+                      Configure automated backups with your Postgres provider.
                     </p>
                   </td>
                 </tr>

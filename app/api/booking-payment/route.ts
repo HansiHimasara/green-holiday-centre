@@ -1,211 +1,29 @@
-import { randomBytes } from "node:crypto";
-
 import { NextResponse } from "next/server";
-
 import { db } from "@/src/prisma/db";
+import { verifyPaymentLink } from "@/src/server/bookingLinks";
 
 export const runtime = "nodejs";
 
-function createPaymentReference() {
-  return `PAY-${randomBytes(8)
-    .toString("hex")
-    .toUpperCase()}`;
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const id = Number(url.searchParams.get("booking"));
+  const token = url.searchParams.get("token") || "";
+  if (!Number.isInteger(id) || id < 1) return NextResponse.json({ error: "Invalid booking." }, { status: 400 });
+  const booking = await db.orm.public.Booking.where({ id }).first();
+  if (!booking) return NextResponse.json({ error: "Booking not found." }, { status: 404 });
+  const customer = await db.orm.public.Customer.where({ id: booking.customerId }).first();
+  if (!customer || !verifyPaymentLink(id, customer.email, token)) {
+    return NextResponse.json({ error: "Invalid payment link." }, { status: 403 });
+  }
+  return NextResponse.json({ booking: {
+    id: booking.id, bookingReference: booking.bookingReference,
+    amount: Number(booking.totalAmount), currency: booking.currency,
+    status: booking.status, paymentStatus: booking.paymentStatus,
+  } });
 }
 
-export async function POST(
-  request: Request
-) {
-  try {
-    const body =
-      await request.json();
-
-    const bookingId =
-      Number(
-        body.bookingId
-      );
-
-    if (
-      !Number.isInteger(
-        bookingId
-      ) ||
-      bookingId <= 0
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "Invalid booking.",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    // Find booking
-    const booking =
-      await db.orm.public.Booking
-        .where({
-          id: bookingId,
-        })
-        .first();
-
-    if (!booking) {
-      return NextResponse.json(
-        {
-          error:
-            "Booking not found.",
-        },
-        {
-          status: 404,
-        }
-      );
-    }
-
-    // Check whether a payment
-    // already exists.
-    const existingPayment =
-      await db.orm.public.Payment
-        .where({
-          bookingId,
-        })
-        .first();
-
-    if (
-      existingPayment &&
-      (
-        existingPayment.status ===
-          "PENDING" ||
-        existingPayment.status ===
-          "PAID"
-      )
-    ) {
-      return NextResponse.json(
-        {
-          message:
-            "Payment already exists.",
-
-          payment: {
-            id:
-              existingPayment.id,
-
-            transactionReference:
-              existingPayment
-                .transactionReference,
-
-            status:
-              existingPayment.status,
-
-            amount:
-              existingPayment.amount,
-
-            currency:
-              existingPayment
-                .currency,
-          },
-        }
-      );
-    }
-
-    const transactionReference =
-      createPaymentReference();
-
-    const result =
-      await db.transaction(
-        async (tx) => {
-          // Card number and CVV
-          // are intentionally NOT saved.
-          const payment =
-            await tx.orm.public.Payment.create(
-              {
-                bookingId,
-
-                amount:
-                  String(
-                    booking.totalAmount
-                  ),
-
-                currency:
-                  booking.currency,
-
-                paymentMethod:
-                  "CARD",
-
-                status:
-                  "PENDING",
-
-                transactionReference,
-              }
-            );
-
-          if (!payment) {
-            throw new Error(
-              "Unable to create payment."
-            );
-          }
-
-          const updatedBooking =
-            await tx.orm.public.Booking
-              .where({
-                id: bookingId,
-              })
-              .update({
-                paymentStatus:
-                  "PENDING",
-              });
-
-          if (!updatedBooking) {
-            throw new Error(
-              "Unable to update booking payment status."
-            );
-          }
-
-          return {
-            payment,
-          };
-        }
-      );
-
-    return NextResponse.json(
-      {
-        message:
-          "Payment request created successfully.",
-
-        payment: {
-          id:
-            result.payment.id,
-
-          transactionReference:
-            result.payment
-              .transactionReference,
-
-          status:
-            result.payment.status,
-
-          amount:
-            result.payment.amount,
-
-          currency:
-            result.payment.currency,
-        },
-      },
-      {
-        status: 201,
-      }
-    );
-  } catch (error) {
-    console.error(
-      "PAYMENT ERROR:",
-      error
-    );
-
-    return NextResponse.json(
-      {
-        error:
-          "Unable to process the payment request.",
-      },
-      {
-        status: 500,
-      }
-    );
-  }
+export async function POST() {
+  // A payment must be initiated by the contracted provider's signed hosted checkout.
+  // Never accept card details or mark a booking paid from a browser request.
+  return NextResponse.json({ error: "The payment gateway is not configured. Please contact Green Holiday Centre." }, { status: 503 });
 }

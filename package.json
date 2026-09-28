@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "node --import tsx --test tests/*.test.ts",
     "contract:emit": "prisma contract emit"
   },
   "dependencies": {
@@ -22,6 +23,7 @@
   "devDependencies": {
     "@prisma/cli-engine": "^0.4.0",
     "@tailwindcss/postcss": "^4",
+    "@types/google.maps": "^3.66.4",
     "@types/node": "^20",
     "@types/nodemailer": "^8.0.2",
     "@types/react": "^19",

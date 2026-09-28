@@ -111,7 +111,7 @@ export async function POST(
     });
 
     const appUrl =
-      process.env.APP_URL ||
+      process.env.APP_BASE_URL ||
       "http://localhost:3000";
 
     const resetLink =

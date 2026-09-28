@@ -32,11 +32,6 @@ const menuItems = [
     icon: "vehicles",
   },
   {
-    label: "Pricing",
-    href: "/admin/pricing",
-    icon: "pricing",
-  },
-  {
     label: "Customers",
     href: "/admin/customers",
     icon: "customers",

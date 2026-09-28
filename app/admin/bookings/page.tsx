@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import AdminPageLayout from "@/components/admin/AdminPageLayout";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
@@ -16,51 +16,10 @@ type Booking = {
   date: string;
   vehicle: string;
   status: BookingStatus;
+  dbId: number;
 };
 
-const initialBookings: Booking[] = [
-  {
-    id: "GH-2026-1045",
-    customer: "Kasun Silva",
-    date: "2026-06-22",
-    vehicle: "Mercedes Benz",
-    status: "confirmed",
-  },
-  {
-    id: "GH-2026-1044",
-    customer: "Nimali Jayasuriya",
-    date: "2026-06-21",
-    vehicle: "Toyota Hiace",
-    status: "pending",
-  },
-  {
-    id: "GH-2026-1043",
-    customer: "Dilshan Perera",
-    date: "2026-06-20",
-    vehicle: "Toyota Prius",
-    status: "cancelled",
-  },
-  {
-    id: "GH-2026-1042",
-    customer: "Shan Wijekoon",
-    date: "2026-06-19",
-    vehicle: "Suzuki Wagon R",
-    status: "confirmed",
-  },
-];
 
-const vehicleOptions = [
-  "Mercedes Benz",
-  "Toyota Hiace",
-  "Toyota Prius",
-  "Suzuki Wagon R",
-  "Toyota KDH",
-  "Toyota Alphard",
-  "Mercedes Sprinter",
-  "Executive Minivan",
-  "Luxury SUV",
-  "Premium Hybrid Sedan",
-];
 
 const inputClasses = `
   h-9
@@ -105,7 +64,16 @@ const selectClasses = `
 
 export default function AdminBookingsPage() {
   const [bookings, setBookings] =
-    useState<Booking[]>(initialBookings);
+    useState<Booking[]>([]);
+
+  async function reload() {
+    const response = await fetch("/api/admin/bookings", { cache: "no-store" });
+    if (!response.ok) { window.alert("Unable to load bookings."); return; }
+    const data = await response.json();
+    setBookings(data.bookings ?? []);
+  }
+  useEffect(() => { void reload(); }, []);
+  const vehicleOptions = [...new Set(bookings.map(booking => booking.vehicle))];
 
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -167,28 +135,14 @@ export default function AdminBookingsPage() {
      SAVE BOOKING
   ========================================== */
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!editingBooking) return;
-
-    if (
-      !editingBooking.id.trim() ||
-      !editingBooking.customer.trim() ||
-      !editingBooking.date.trim() ||
-      !editingBooking.vehicle.trim()
-    ) {
-      return;
-    }
-
-    setBookings((currentBookings) =>
-      currentBookings.map((booking) =>
-        booking.id === editingId
-          ? editingBooking
-          : booking,
-      ),
-    );
-
-    setEditingId(null);
-    setEditingBooking(null);
+    const response = await fetch(`/api/admin/bookings/${editingBooking.dbId}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: editingBooking.status }),
+    });
+    if (!response.ok) { window.alert((await response.json()).error || "Unable to update booking."); return; }
+    await reload(); setEditingId(null); setEditingBooking(null);
   };
 
   /* ==========================================
@@ -204,17 +158,15 @@ export default function AdminBookingsPage() {
      DELETE BOOKING
   ========================================== */
 
-  const handleDelete = (id: string) => {
-    setBookings((currentBookings) =>
-      currentBookings.filter(
-        (booking) => booking.id !== id,
-      ),
-    );
-
-    if (editingId === id) {
-      setEditingId(null);
-      setEditingBooking(null);
-    }
+  const handleDelete = async (id: string) => {
+    const booking = bookings.find(item => item.id === id);
+    if (!booking) return;
+    const response = await fetch(`/api/admin/bookings/${booking.dbId}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "CANCELLED" }),
+    });
+    if (!response.ok) { window.alert((await response.json()).error || "Unable to cancel booking."); return; }
+    await reload();
   };
 
   /* ==========================================
@@ -222,23 +174,7 @@ export default function AdminBookingsPage() {
   ========================================== */
 
   const handleManualEntry = () => {
-    const newBooking: Booking = {
-      id: `GH-2026-${Math.floor(
-        1000 + Math.random() * 9000,
-      )}`,
-      customer: "",
-      date: "",
-      vehicle: "",
-      status: "pending",
-    };
-
-    setBookings((currentBookings) => [
-      newBooking,
-      ...currentBookings,
-    ]);
-
-    setEditingId(newBooking.id);
-    setEditingBooking({ ...newBooking });
+    window.alert("Bookings are created through the customer booking form so the route and price can be verified.");
   };
 
   return (
@@ -416,10 +352,7 @@ export default function AdminBookingsPage() {
                             type="text"
                             value={editingBooking.id}
                             onChange={(event) =>
-                              updateEditingField(
-                                "id",
-                                event.target.value,
-                              )
+                              undefined
                             }
                             className={`${inputClasses} min-w-[145px]`}
                           />
@@ -441,10 +374,7 @@ export default function AdminBookingsPage() {
                               editingBooking.customer
                             }
                             onChange={(event) =>
-                              updateEditingField(
-                                "customer",
-                                event.target.value,
-                              )
+                              undefined
                             }
                             placeholder="Customer name"
                             className={`${inputClasses} min-w-[160px]`}
@@ -465,10 +395,7 @@ export default function AdminBookingsPage() {
                             type="date"
                             value={editingBooking.date}
                             onChange={(event) =>
-                              updateEditingField(
-                                "date",
-                                event.target.value,
-                              )
+                              undefined
                             }
                             className={`${inputClasses} min-w-[145px]`}
                           />
@@ -491,10 +418,7 @@ export default function AdminBookingsPage() {
                               editingBooking.vehicle
                             }
                             onChange={(event) =>
-                              updateEditingField(
-                                "vehicle",
-                                event.target.value,
-                              )
+                              undefined
                             }
                             placeholder="Type or select vehicle"
                             className={`${inputClasses} min-w-[190px]`}

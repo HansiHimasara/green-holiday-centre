@@ -130,6 +130,7 @@ export default function BookingSummaryPage() {
     setSubmitting,
   ] =
     useState(false);
+  const [emailDelivered, setEmailDelivered] = useState<boolean | null>(null);
 
   const [
     quoteLoading,
@@ -161,20 +162,6 @@ export default function BookingSummaryPage() {
       return;
     }
 
-    if (draft.serviceType === "ROUND_TOUR") {
-      setQuoteLoading(false);
-      setQuoteError("");
-      return;
-    }
-
-    if (!draft.pricingId) {
-      setQuoteError(
-        "Please select a pricing route before viewing the summary."
-      );
-
-      return;
-    }
-
     let cancelled = false;
 
     const loadQuote = async () => {
@@ -184,11 +171,7 @@ export default function BookingSummaryPage() {
         );
         setQuoteError("");
 
-        const waypoints =
-          draft.serviceType ===
-            "DAY_TOUR"
-            ? draft.destinations ?? []
-            : [];
+        const waypoints = draft.serviceType === "AIRPORT_TRANSFER" ? [] : draft.destinations ?? [];
 
         const response =
           await fetch(
@@ -204,8 +187,8 @@ export default function BookingSummaryPage() {
                   {
                     serviceType:
                       draft.serviceType,
-                    pricingId:
-                      draft.pricingId,
+                    vehicleTypeId:
+                      draft.vehicleTypeId,
                     pickupLocation:
                       draft.pickupLocation,
                     dropoffLocation:
@@ -298,7 +281,7 @@ export default function BookingSummaryPage() {
     };
   }, [
     draft?.serviceType,
-    draft?.pricingId,
+    draft?.vehicleTypeId,
     draft?.pickupLocation,
     draft?.dropoffLocation,
     draft?.destinations,
@@ -329,7 +312,8 @@ export default function BookingSummaryPage() {
     draft.serviceType === "ROUND_TOUR";
 
   const totalAmount =
-    !isRoundTour &&
+    !quoteLoading &&
+    !quoteError &&
     typeof draft.totalAmount ===
       "number" &&
     Number.isFinite(
@@ -340,9 +324,11 @@ export default function BookingSummaryPage() {
 
   const currency =
     draft.currency ??
-    "LKR";
+    "USD";
 
   const distanceText =
+    !quoteLoading &&
+    !quoteError &&
     typeof draft.actualKilometres ===
       "number" &&
     Number.isFinite(
@@ -497,6 +483,11 @@ export default function BookingSummaryPage() {
       return;
     }
 
+    if (String(nextPage) === "payment") {
+      window.alert("Secure online payment is awaiting Green Holiday Travels' gateway connection. You can reserve the vehicle now and receive your booking details by email.");
+      return;
+    }
+
     if (
       !currentDraft.serviceType ||
       !currentDraft.vehicleTypeId ||
@@ -511,21 +502,8 @@ export default function BookingSummaryPage() {
       return;
     }
 
-    if (
-      currentDraft.serviceType !== "ROUND_TOUR" &&
-      !currentDraft.pricingId
-    ) {
-      window.alert(
-        "Please select a pricing route before creating the booking."
-      );
-
-      return;
-    }
-
     const bookingTotalAmount =
-      currentDraft.serviceType === "ROUND_TOUR"
-        ? 0
-        : typeof currentDraft.totalAmount ===
+      typeof currentDraft.totalAmount ===
               "number" &&
             Number.isFinite(
               currentDraft.totalAmount
@@ -533,14 +511,9 @@ export default function BookingSummaryPage() {
           ? currentDraft.totalAmount
           : totalAmount;
 
-    const bookingCurrency =
-      currentDraft.serviceType === "ROUND_TOUR"
-        ? "LKR"
-        : currentDraft.currency ??
-          currency;
+    const bookingCurrency = currentDraft.currency ?? currency;
 
     if (
-      currentDraft.serviceType !== "ROUND_TOUR" &&
       bookingTotalAmount === null
     ) {
       window.alert(
@@ -551,7 +524,6 @@ export default function BookingSummaryPage() {
     }
 
     if (
-      currentDraft.serviceType !== "ROUND_TOUR" &&
       quoteError
     ) {
       window.alert(
@@ -564,23 +536,8 @@ export default function BookingSummaryPage() {
     const customer =
       currentDraft.customer;
 
-    if (
-      currentDraft.bookingId &&
-      currentDraft.bookingReference
-    ) {
-      if (
-        nextPage ===
-        "payment"
-      ) {
-        router.push(
-          "/customer/booking/payment"
-        );
-      } else {
-        router.push(
-          "/customer/booking/confirmation"
-        );
-      }
-
+    if (currentDraft.bookingId && currentDraft.bookingReference) {
+      window.alert(`Your reservation ${currentDraft.bookingReference} has already been created.`);
       return;
     }
 
@@ -605,9 +562,6 @@ export default function BookingSummaryPage() {
                 {
                   serviceType:
                     currentDraft.serviceType,
-
-                  pricingId:
-                    currentDraft.pricingId,
 
                   vehicleTypeId:
                     currentDraft.vehicleTypeId,
@@ -650,6 +604,7 @@ export default function BookingSummaryPage() {
                   currency:
                     bookingCurrency,
 
+                  reservationOnly: nextPage !== "payment",
                   customer: {
                     fullName:
                       customer.fullName,
@@ -687,6 +642,11 @@ export default function BookingSummaryPage() {
         );
 
         return;
+      }
+
+      setEmailDelivered(Boolean(data.emailSent));
+      if (nextPage !== "payment") {
+        window.alert(data.emailSent ? "Reservation created. We sent your tour details and payment link by email." : "Reservation created, but email delivery could not be confirmed. Please contact the travel office with your booking reference.");
       }
 
       if (!data.booking) {
@@ -748,9 +708,7 @@ export default function BookingSummaryPage() {
           "/customer/booking/payment"
         );
       } else {
-        router.push(
-          "/customer/booking/confirmation"
-        );
+        // The summary remains visible with the saved reference and email status.
       }
     } catch (error) {
       console.error(
@@ -939,9 +897,7 @@ export default function BookingSummaryPage() {
                     </p>
 
                     <p className="mt-1 max-w-[500px] text-[12px] leading-5 text-[var(--text-secondary)]">
-                      {isRoundTour
-                        ? "Final price will be confirmed after reviewing your selected round tour route."
-                        : quoteLoading
+                      {quoteLoading
                           ? "Calculating the road distance and final price..."
                           : quoteError
                             ? quoteError
@@ -950,12 +906,9 @@ export default function BookingSummaryPage() {
                   </div>
 
                   <span className="whitespace-nowrap font-serif text-[26px] font-bold text-[var(--green-dark)]">
-                    {isRoundTour
-                      ? "Price Pending"
-                      : formatCurrencyAmount(
-                          totalAmount,
-                          currency
-                        )}
+                    {quoteError
+                      ? "Unavailable"
+                      : formatCurrencyAmount(totalAmount, currency)}
                   </span>
                 </div>
               </div>
@@ -1006,6 +959,8 @@ export default function BookingSummaryPage() {
                 </span>
               </label>
 
+              {draft.bookingId && <p role="status" className="mt-6 rounded-lg border border-[var(--green-primary)]/20 bg-[var(--surface-soft)] p-4 text-sm font-semibold text-[var(--green-dark)]">Reservation saved: {draft.bookingReference}. {emailDelivered === true ? "Check your email for tour details and the payment link." : "Email delivery has not been confirmed. Contact the travel office with this reference."}</p>}
+
               {/* ==========================================
                   BUTTONS
               ========================================== */}
@@ -1028,26 +983,18 @@ export default function BookingSummaryPage() {
                     }
                     disabled={
                       submitting ||
-                      (
-                        !isRoundTour &&
-                        (
-                          quoteLoading ||
-                          totalAmount === null
-                        )
-                      )
+                      quoteLoading || totalAmount === null
                     }
                     className="min-w-[180px]"
                   >
                     {submitting
                       ? "Please Wait..."
-                      : !isRoundTour &&
-                          quoteLoading
+                      : quoteLoading
                         ? "Calculating..."
                         : "Make a Reservation"}
                   </Button>
 
-                  {!isRoundTour && (
-                    <Button
+                  <Button
                       onClick={() =>
                         void createBooking(
                           "payment"
@@ -1066,7 +1013,6 @@ export default function BookingSummaryPage() {
                           ? "Calculating..."
                           : "Proceed to Payment"}
                     </Button>
-                  )}
                 </div>
               </div>
             </div>

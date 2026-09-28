@@ -1,352 +1,539 @@
-import { db } from "@/src/prisma/db";
-
 export type BookingPricingServiceType =
   | "AIRPORT_TRANSFER"
   | "DAY_TOUR"
   | "ROUND_TOUR";
 
-type GeocodedLocation = {
-  input: string;
-  resolved: string;
-  coordinates: [number, number];
+type Coordinate = [
+  number,
+  number,
+];
+
+type PhotonFeature = {
+  geometry?: {
+    coordinates?: [
+      number,
+      number,
+    ];
+  };
 };
 
-type CalculateBookingPriceInput = {
-  serviceType: BookingPricingServiceType;
-  pricingId: number;
-  pickupLocation?: string;
-  dropoffLocation?: string;
-  waypoints?: string[];
+type PhotonResponse = {
+  features?: PhotonFeature[];
 };
 
-export type CalculatedBookingPrice = {
-  serviceType: BookingPricingServiceType;
-  pricing: {
-    id: number;
-    fromLocation: string;
-    toLocation: string;
-    configuredKilometres: number;
-    baseCharge: number;
-    extraKilometreCharge: number;
-    currency: string;
-  };
-  route: {
-    locations: GeocodedLocation[];
-    actualKilometres: number;
-    distanceMeters: number;
-    durationSeconds: number;
-    durationMinutes: number;
-    extraKilometres: number;
-  };
-  totalAmount: number;
-  currency: string;
-};
-
-function getOpenRouteServiceApiKey() {
-  const apiKey =
-    process.env.OPENROUTESERVICE_API_KEY;
-
-  if (!apiKey) {
-    throw new Error(
-      "OPENROUTESERVICE_API_KEY is not configured."
-    );
-  }
-
-  return apiKey;
-}
-
-function roundToTwoDecimals(value: number) {
-  return Math.round(value * 100) / 100;
-}
-
-function normalizeLocation(value?: string) {
-  return value?.trim() ?? "";
-}
-
-async function geocodeLocation(
-  location: string,
-  apiKey: string
-): Promise<GeocodedLocation> {
-  const searchUrl =
-    `https://api.heigit.org/pelias/v1/search?text=${encodeURIComponent(
-      location
-    )}&size=1&boundary.country=LKA`;
-
-  const response = await fetch(searchUrl, {
-    method: "GET",
-    headers: {
-      Authorization: apiKey,
-    },
-  });
-
-  const data = (await response.json()) as {
-    features?: Array<{
-      geometry?: {
-        coordinates?: [number, number];
-      };
-      properties?: {
-        label?: string;
-        name?: string;
-      };
-    }>;
-    error?: string;
-    message?: string;
-  };
-
-  if (!response.ok) {
-    throw new Error(
-      data.error ||
-        data.message ||
-        "Unable to find location."
-    );
-  }
-
-  const firstResult =
-    data.features?.[0];
-
-  const coordinates =
-    firstResult?.geometry?.coordinates;
-
-  if (
-    !firstResult ||
-    !coordinates ||
-    coordinates.length < 2
-  ) {
-    throw new Error(
-      `Unable to find coordinates for ${location}.`
-    );
-  }
-
-  return {
-    input: location,
-    resolved:
-      firstResult.properties?.label ||
-      firstResult.properties?.name ||
-      location,
-    coordinates,
-  };
-}
-
-async function calculateRoute(
-  locations: string[],
-  apiKey: string
-) {
-  const geocodedLocations =
-    await Promise.all(
-      locations.map((location) =>
-        geocodeLocation(location, apiKey)
-      )
-    );
-
-  const response = await fetch(
-    "https://api.heigit.org/openrouteservice/v2/directions/driving-car",
-    {
-      method: "POST",
-      headers: {
-        Authorization: apiKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        coordinates: geocodedLocations.map(
-          (location) => location.coordinates
-        ),
-        radiuses: geocodedLocations.map(() => 2000),
-        instructions: false,
-      }),
-    }
-  );
-
-  const data = (await response.json()) as {
-    routes?: Array<{
+type OpenRouteServiceResponse = {
+  features?: Array<{
+    properties?: {
       summary?: {
         distance?: number;
         duration?: number;
       };
-    }>;
-    error?: {
-      message?: string;
     };
-    message?: string;
-  };
+  }>;
+};
 
-  if (!response.ok) {
-    throw new Error(
-      data.error?.message ||
-        data.message ||
-        "Unable to calculate route distance."
+export type BookingPriceResult = {
+  totalAmount: number;
+
+  currency: string;
+
+  vehicleRatePerKm: number;
+
+  route: {
+    actualKilometres: number;
+
+    billableKilometres: number;
+
+    durationMinutes: number;
+  };
+};
+
+/* =========================================================
+   FETCH WITH TIMEOUT
+========================================================= */
+
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeoutMs = 15000
+) {
+  const controller =
+    new AbortController();
+
+  const timeout =
+    setTimeout(
+      () => {
+        controller.abort();
+      },
+      timeoutMs
+    );
+
+  try {
+    return await fetch(
+      url,
+      {
+        ...options,
+
+        signal:
+          controller.signal,
+      }
+    );
+  } finally {
+    clearTimeout(
+      timeout
     );
   }
-
-  const summary =
-    data.routes?.[0]?.summary;
-
-  const distanceMeters =
-    summary?.distance;
-
-  const durationSeconds =
-    summary?.duration ?? 0;
-
-  if (
-    distanceMeters === undefined ||
-    !Number.isFinite(distanceMeters)
-  ) {
-    throw new Error(
-      "A valid distance could not be calculated."
-    );
-  }
-
-  return {
-    locations: geocodedLocations,
-    distanceMeters,
-    durationSeconds,
-    actualKilometres: roundToTwoDecimals(
-      distanceMeters / 1000
-    ),
-    durationMinutes: Math.round(
-      durationSeconds / 60
-    ),
-  };
 }
 
-export async function calculateBookingPrice(
-  input: CalculateBookingPriceInput
-): Promise<CalculatedBookingPrice> {
-  const pricing =
-    await db.orm.public.Pricing
-      .where({
-        id: input.pricingId,
-      })
-      .first();
+/* =========================================================
+   GEOCODE LOCATION
+========================================================= */
 
-  if (!pricing) {
+async function geocodeLocation(
+  location: string
+): Promise<Coordinate> {
+  const cleanLocation =
+    location.trim();
+
+  if (!cleanLocation) {
     throw new Error(
-      "Selected pricing route was not found."
+      "A route location is missing."
     );
   }
 
-  if (!pricing.active) {
+  const params =
+    new URLSearchParams({
+      q: cleanLocation,
+
+      limit: "1",
+
+      lang: "en",
+
+      countrycode: "LK",
+
+      lat: "7.8731",
+
+      lon: "80.7718",
+    });
+
+  let response: Response;
+
+  try {
+    response =
+      await fetchWithTimeout(
+        `https://photon.komoot.io/api/?${params.toString()}`,
+        {
+          method: "GET",
+
+          cache:
+            "no-store",
+        },
+        15000
+      );
+  } catch (error) {
+    console.error(
+      "Photon request error:",
+      error
+    );
+
     throw new Error(
-      "Selected pricing route is not active."
+      `Unable to find coordinates for ${cleanLocation}.`
     );
   }
 
-  const configuredKilometres =
-    Number(pricing.kilometres);
+  if (!response.ok) {
+    console.error(
+      "Photon status:",
+      response.status
+    );
 
-  const baseCharge =
-    pricing.baseCharge === null
-      ? NaN
-      : Number(pricing.baseCharge);
+    throw new Error(
+      `Unable to locate "${cleanLocation}".`
+    );
+  }
 
-  const extraKilometreCharge =
-    Number(pricing.extraKilometreCharge);
+  const data =
+    (await response.json()) as PhotonResponse;
+
+  const coordinates =
+    data.features?.[0]
+      ?.geometry
+      ?.coordinates;
 
   if (
-    !Number.isFinite(configuredKilometres) ||
-    configuredKilometres <= 0
+    !coordinates ||
+    coordinates.length < 2
   ) {
     throw new Error(
-      "Configured kilometre value is invalid."
+      `Location not found: ${cleanLocation}`
     );
   }
+
+  const longitude =
+    Number(
+      coordinates[0]
+    );
+
+  const latitude =
+    Number(
+      coordinates[1]
+    );
 
   if (
-    !Number.isFinite(baseCharge) ||
-    baseCharge < 0
+    !Number.isFinite(
+      longitude
+    ) ||
+    !Number.isFinite(
+      latitude
+    )
   ) {
     throw new Error(
-      "Base charge has not been configured for this route."
+      `Invalid coordinates for ${cleanLocation}.`
     );
   }
 
-  if (
-    !Number.isFinite(extraKilometreCharge) ||
-    extraKilometreCharge < 0
-  ) {
-    throw new Error(
-      "Extra kilometre charge is invalid."
-    );
-  }
-
-  const apiKey =
-    getOpenRouteServiceApiKey();
-
-  const pickupLocation =
-    normalizeLocation(input.pickupLocation) ||
-    pricing.fromLocation;
-
-  const dropoffLocation =
-    normalizeLocation(input.dropoffLocation) ||
-    pricing.toLocation;
-
-  const waypoints =
-    input.waypoints
-      ?.map((waypoint) => waypoint.trim())
-      .filter(Boolean) ?? [];
-
-  const routeLocations = [
-    pickupLocation,
-    ...waypoints,
-    dropoffLocation,
+  return [
+    longitude,
+    latitude,
   ];
+}
 
-  if (routeLocations.length < 2) {
+/* =========================================================
+   ROAD ROUTE
+========================================================= */
+
+async function calculateRoadRoute(
+  locations: string[]
+) {
+  const apiKey =
+    process.env
+      .OPENROUTESERVICE_API_KEY;
+
+  if (!apiKey) {
     throw new Error(
-      "At least pickup and dropoff locations are required."
+      "OPENROUTESERVICE_API_KEY is missing from .env."
     );
   }
 
-  const route =
-    await calculateRoute(
-      routeLocations,
-      apiKey
-    );
+  const cleanLocations =
+    locations
+      .map(
+        (location) =>
+          location.trim()
+      )
+      .filter(Boolean);
 
-  const extraKilometres =
-    Math.max(
-      0,
-      roundToTwoDecimals(
-        route.actualKilometres -
-          configuredKilometres
+  if (
+    cleanLocations.length <
+    2
+  ) {
+    throw new Error(
+      "At least two locations are required."
+    );
+  }
+
+  const coordinates =
+    await Promise.all(
+      cleanLocations.map(
+        (location) =>
+          geocodeLocation(
+            location
+          )
       )
     );
 
-  const totalAmount =
-    roundToTwoDecimals(
-      baseCharge +
-        extraKilometres *
-          extraKilometreCharge
+  let response: Response;
+
+  try {
+    response =
+      await fetchWithTimeout(
+        "https://api.openrouteservice.org/v2/directions/driving-car/geojson",
+        {
+          method:
+            "POST",
+
+          headers: {
+            Authorization:
+              apiKey,
+
+            "Content-Type":
+              "application/json",
+          },
+
+          body:
+            JSON.stringify({
+              coordinates,
+
+              // Places such as an airport can be mapped to the centre
+              // of the site rather than its road entrance.
+              radiuses:
+                coordinates.map(
+                  () => 1500
+                ),
+            }),
+
+          cache:
+            "no-store",
+        },
+        20000
+      );
+  } catch (error) {
+    console.error(
+      "OpenRouteService request error:",
+      error
     );
 
-  const currency =
-    String(pricing.currency ?? "LKR")
-      .trim()
-      .toUpperCase() || "LKR";
+    throw new Error(
+      "The route service took too long to respond. Please try again."
+    );
+  }
+
+  if (!response.ok) {
+    const errorText =
+      await response.text();
+
+    console.error(
+      "OpenRouteService error:",
+      response.status,
+      errorText
+    );
+
+    if (response.status === 404) {
+      try {
+        const serviceError = JSON.parse(errorText) as {
+          error?: { code?: number; message?: string };
+        };
+
+        if (serviceError.error?.code === 2010) {
+          const coordinateIndex = Number(
+            serviceError.error.message?.match(
+              /coordinate\s+(\d+)/i
+            )?.[1]
+          );
+          const location = Number.isInteger(coordinateIndex)
+            ? cleanLocations[coordinateIndex]
+            : undefined;
+
+          throw new Error(
+            location
+              ? `No drivable road was found near "${location}". Please select a nearby road entrance or pickup point.`
+              : "No drivable road was found near one of the selected locations. Please select a nearby road entrance or pickup point."
+          );
+        }
+      } catch (error) {
+        if (error instanceof Error &&
+            error.message.startsWith("No drivable road")) {
+          throw error;
+        }
+      }
+    }
+
+    throw new Error(
+      "Unable to calculate the road distance for this route."
+    );
+  }
+
+  const data =
+    (await response.json()) as OpenRouteServiceResponse;
+
+  const summary =
+    data.features?.[0]
+      ?.properties
+      ?.summary;
+
+  const distanceMetres =
+    Number(
+      summary?.distance
+    );
+
+  const durationSeconds =
+    Number(
+      summary?.duration
+    );
+
+  if (
+    !Number.isFinite(
+      distanceMetres
+    ) ||
+    distanceMetres <= 0
+  ) {
+    throw new Error(
+      "A valid road distance could not be calculated."
+    );
+  }
+
+  const actualKilometres =
+    distanceMetres /
+    1000;
+
+  const durationMinutes =
+    Number.isFinite(
+      durationSeconds
+    )
+      ? Math.ceil(
+          durationSeconds /
+            60
+        )
+      : 0;
 
   return {
-    serviceType: input.serviceType,
-    pricing: {
-      id: pricing.id,
-      fromLocation: pricing.fromLocation,
-      toLocation: pricing.toLocation,
-      configuredKilometres,
-      baseCharge,
-      extraKilometreCharge,
-      currency,
-    },
+    actualKilometres,
+
+    durationMinutes,
+  };
+}
+
+/* =========================================================
+   PRICE CALCULATION
+========================================================= */
+
+export async function calculateBookingPrice({
+  serviceType,
+  pickupLocation,
+  dropoffLocation,
+  waypoints = [],
+  vehicleRatePerKm,
+}: {
+  serviceType:
+    BookingPricingServiceType;
+
+  pickupLocation:
+    string;
+
+  dropoffLocation:
+    string;
+
+  waypoints?:
+    string[];
+
+  vehicleRatePerKm:
+    number;
+}): Promise<BookingPriceResult> {
+  if (
+    !pickupLocation.trim()
+  ) {
+    throw new Error(
+      "Pickup location is required."
+    );
+  }
+
+  if (
+    !dropoffLocation.trim()
+  ) {
+    throw new Error(
+      "Drop location is required."
+    );
+  }
+
+  if (
+    !Number.isFinite(
+      vehicleRatePerKm
+    ) ||
+    vehicleRatePerKm <= 0
+  ) {
+    throw new Error(
+      "The selected vehicle does not have a valid rate per kilometre."
+    );
+  }
+
+  const cleanWaypoints =
+    waypoints
+      .map(
+        (location) =>
+          location.trim()
+      )
+      .filter(Boolean);
+
+  let routeLocations:
+    string[];
+
+  if (
+    serviceType ===
+    "AIRPORT_TRANSFER"
+  ) {
+    routeLocations = [
+      pickupLocation,
+      dropoffLocation,
+    ];
+  } else if (
+    serviceType ===
+    "DAY_TOUR"
+  ) {
+    if (
+      cleanWaypoints.length <
+      1
+    ) {
+      throw new Error(
+        "Day Tour destination is required."
+      );
+    }
+
+    routeLocations = [
+      pickupLocation,
+      ...cleanWaypoints,
+      dropoffLocation,
+    ];
+  } else {
+    if (
+      cleanWaypoints.length <
+      1
+    ) {
+      throw new Error(
+        "At least one Round Tour destination is required."
+      );
+    }
+
+    routeLocations = [
+      pickupLocation,
+      ...cleanWaypoints,
+      dropoffLocation,
+    ];
+  }
+
+  const route =
+    await calculateRoadRoute(
+      routeLocations
+    );
+
+  const billableKilometres = route.actualKilometres + 20;
+  const markupNames: Record<BookingPricingServiceType, string> = {
+    AIRPORT_TRANSFER: "AIRPORT_TRANSFER_MARKUP_LKR",
+    DAY_TOUR: "DAY_TOUR_MARKUP_LKR",
+    ROUND_TOUR: "ROUND_TOUR_MARKUP_LKR",
+  };
+  const markup = Number(process.env[markupNames[serviceType]]);
+  const lkrPerUsd = Number(process.env.LKR_PER_USD);
+  if (!process.env[markupNames[serviceType]] || !Number.isFinite(markup) || markup < 0 ||
+      !process.env.LKR_PER_USD || !Number.isFinite(lkrPerUsd) || lkrPerUsd <= 0) {
+    throw new Error("Pricing settings are missing. Contact the travel office.");
+  }
+  const totalAmount = Math.ceil(((billableKilometres * vehicleRatePerKm + markup) / lkrPerUsd) * 100) / 100;
+
+  return {
+    totalAmount,
+
+    currency:
+      "USD",
+
+    vehicleRatePerKm,
+
     route: {
-      locations: route.locations,
       actualKilometres:
-        route.actualKilometres,
-      distanceMeters:
-        route.distanceMeters,
-      durationSeconds:
-        route.durationSeconds,
+        Number(
+          route.actualKilometres.toFixed(
+            2
+          )
+        ),
+
+      billableKilometres:
+        Number(
+          billableKilometres.toFixed(
+            2
+          )
+        ),
+
       durationMinutes:
         route.durationMinutes,
-      extraKilometres,
     },
-    totalAmount,
-    currency,
   };
 }

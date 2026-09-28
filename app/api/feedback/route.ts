@@ -79,6 +79,10 @@ export async function POST(request: Request) {
         );
       }
 
+      const owner = await db.orm.public.Customer.where({ id: booking.customerId }).first();
+      if (!owner || !email || owner.email.toLowerCase() !== email) {
+        return NextResponse.json({ error: "Booking reference and email do not match." }, { status: 403 });
+      }
       bookingId = booking.id;
       customerId = booking.customerId;
     }
@@ -90,7 +94,7 @@ export async function POST(request: Request) {
       message,
       bookingId,
       customerId,
-      visibility: "VISIBLE",
+      visibility: "HIDDEN",
     });
 
     return NextResponse.json(
@@ -107,5 +111,16 @@ export async function POST(request: Request) {
       { error: "Unable to submit feedback. Please try again." },
       { status: 500 }
     );
+  }
+}
+
+export async function GET() {
+  try {
+    const rows = await db.orm.public.Feedback.where({ visibility: "VISIBLE" }).all();
+    return NextResponse.json({ feedback: rows.map(row => ({
+      id: row.id, fullName: row.fullName, rating: row.rating, message: row.message,
+    })) });
+  } catch {
+    return NextResponse.json({ error: "Unable to load feedback." }, { status: 500 });
   }
 }

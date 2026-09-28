@@ -18,103 +18,38 @@ type Report = {
   variance: string;
 };
 
-const performanceReports: Report[] = [
-  {
-    name: "Total Bookings Completed",
-    current: "1,128 trips",
-    previous: "982 trips",
-    variance: "+14.9% Increased",
-  },
-  {
-    name: "Total Revenue Generated",
-    current: "Rs. 8,450,000",
-    previous: "Rs. 7,820,000",
-    variance: "+8.1% Increased",
-  },
-  {
-    name: "Average Booking Value",
-    current: "Rs. 7,490",
-    previous: "Rs. 7,180",
-    variance: "+4.3% Increased",
-  },
-];
-
-const bookingReports: Report[] = [
-  {
-    name: "Total Bookings",
-    current: "1,245 bookings",
-    previous: "1,083 bookings",
-    variance: "+15.0% Increased",
-  },
-  {
-    name: "Completed Bookings",
-    current: "1,128 bookings",
-    previous: "982 bookings",
-    variance: "+14.9% Increased",
-  },
-  {
-    name: "Cancelled Bookings",
-    current: "117 bookings",
-    previous: "101 bookings",
-    variance: "+15.8% Increased",
-  },
-];
-
-const revenueReports: Report[] = [
-  {
-    name: "Total Revenue",
-    current: "Rs. 8,450,000",
-    previous: "Rs. 7,820,000",
-    variance: "+8.1% Increased",
-  },
-  {
-    name: "Average Booking Value",
-    current: "Rs. 7,490",
-    previous: "Rs. 7,180",
-    variance: "+4.3% Increased",
-  },
-  {
-    name: "Pending Payments",
-    current: "Rs. 425,000",
-    previous: "Rs. 380,000",
-    variance: "+11.8% Increased",
-  },
-];
-
 export default function AdminReportsPage() {
   const [reportType, setReportType] =
     useState<ReportType>("performance");
 
   const [period, setPeriod] =
-    useState("august");
+    useState(new Date().toISOString().slice(0, 7));
 
   const [generatedReports, setGeneratedReports] =
-    useState<Report[]>(performanceReports);
+    useState<Report[]>([]);
 
   const [generatedPeriod, setGeneratedPeriod] =
-    useState("August 2026");
+    useState("");
 
-  const handleGenerateReport = () => {
-    let reports: Report[] = [];
-
-    if (reportType === "booking") {
-      reports = bookingReports;
-    } else if (reportType === "revenue") {
-      reports = revenueReports;
-    } else {
-      reports = performanceReports;
-    }
-
-    const periodNames: Record<string, string> = {
-      august: "August 2026",
-      july: "July 2026",
-      june: "June 2026",
+  const handleGenerateReport = async () => {
+    const response = await fetch(`/api/admin/reports?period=${encodeURIComponent(period)}`, { cache: "no-store" });
+    if (!response.ok) { window.alert((await response.json()).error || "Report unavailable."); return; }
+    const { current, previous } = await response.json() as {
+      current: Record<string, number>; previous: Record<string, number>;
     };
-
-    setGeneratedReports(reports);
-    setGeneratedPeriod(
-      periodNames[period] ?? "August 2026",
-    );
+    const metric = (name: string, key: string, money = false): Report => {
+      const present = current[key] || 0;
+      const earlier = previous[key] || 0;
+      const display = (number: number) => money ? `USD ${number.toFixed(2)}` : String(number);
+      const variance = earlier ? `${(((present - earlier) / earlier) * 100).toFixed(1)}%` : "—";
+      return { name, current: display(present), previous: display(earlier), variance };
+    };
+    setGeneratedReports(reportType === "booking"
+      ? [metric("Total Bookings", "total"), metric("Completed Bookings", "completed"), metric("Cancelled Bookings", "cancelled")]
+      : reportType === "revenue"
+        ? [metric("Total Revenue", "revenue", true), { name: "Average Booking Value", current: `USD ${(current.revenue / (current.paidCount || 1)).toFixed(2)}`, previous: `USD ${(previous.revenue / (previous.paidCount || 1)).toFixed(2)}`, variance: "—" }, metric("Pending Payments", "pending", true)]
+        : [metric("Total Bookings Completed", "completed"), metric("Total Revenue Generated", "revenue", true), metric("Total Bookings", "total")]);
+    setGeneratedPeriod(new Date(`${period}-01T00:00:00Z`).toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" }));
   };
 
   const handleDownloadPDF = () => {
@@ -209,17 +144,13 @@ export default function AdminReportsPage() {
               lg:flex-1
             "
           >
-            <option value="august">
-              From: August 2026
-            </option>
-
-            <option value="july">
-              From: July 2026
-            </option>
-
-            <option value="june">
-              From: June 2026
-            </option>
+            {Array.from({ length: 12 }, (_, index) => {
+              const date = new Date();
+              date.setUTCDate(1);
+              date.setUTCMonth(date.getUTCMonth() - index);
+              const value = date.toISOString().slice(0, 7);
+              return <option key={value} value={value}>From: {date.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" })}</option>;
+            })}
           </select>
 
           {/* Generate */}

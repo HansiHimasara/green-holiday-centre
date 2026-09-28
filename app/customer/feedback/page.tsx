@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 
@@ -13,6 +15,23 @@ import Button from "@/components/ui/Button";
 import DecorativePattern from "@/components/ui/DecorativePattern";
 
 export default function FeedbackPage() {
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [bookingReference, setBookingReference] = useState("");
+  const [rating, setRating] = useState(5);
+  const [message, setMessage] = useState("");
+  const [notice, setNotice] = useState("");
+  const [reviews, setReviews] = useState<{ id: number; fullName: string; rating: number; message: string }[]>([]);
+  useEffect(() => {
+    void fetch("/api/feedback", { cache: "no-store" }).then(async response => {
+      if (response.ok) setReviews((await response.json()).feedback ?? []);
+    });
+  }, []);
+  async function submitFeedback() {
+    const response = await fetch("/api/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fullName, email, bookingReference, rating, message }) });
+    const data = await response.json();
+    setNotice(response.ok ? "Thank you. Your review has been submitted for approval." : data.error || "Unable to submit feedback.");
+  }
   return (
     <>
       <Header />
@@ -53,18 +72,18 @@ export default function FeedbackPage() {
               <div className="space-y-5">
                 <Input
                   label="Full Name"
-                  placeholder="Enter your name"
+                  placeholder="Enter your name" value={fullName} onChange={event => setFullName(event.target.value)}
                 />
 
                 <Input
                   label="Email Address"
                   type="email"
-                  placeholder="Enter your email"
+                  placeholder="Enter your email" value={email} onChange={event => setEmail(event.target.value)}
                 />
 
                 <Input
                   label="Booking Reference"
-                  placeholder="e.g. GH-2026-0142"
+                  placeholder="e.g. GH-2026-0142" value={bookingReference} onChange={event => setBookingReference(event.target.value)}
                 />
 
                 {/* Rating */}
@@ -74,17 +93,17 @@ export default function FeedbackPage() {
                   </label>
 
                   <div className="rounded-lg border border-[var(--border-light)] bg-white px-4 py-3">
-                    <StarRating />
+                    <StarRating value={rating} onChange={setRating} />
                   </div>
                 </div>
 
                 <Textarea
                   label="Your Feedback"
-                  placeholder="Tell us about your experience..."
+                  placeholder="Tell us about your experience..." value={message} onChange={event => setMessage(event.target.value)}
                 />
 
                 {/* Submit */}
-                <Button
+                <Button onClick={() => void submitFeedback()}
                   className="
                     w-full
                     !bg-[var(--green-primary)]
@@ -94,6 +113,7 @@ export default function FeedbackPage() {
                 >
                   Submit Your Feedback
                 </Button>
+                {notice && <p role="status" className="text-sm text-[var(--green-dark)]">{notice}</p>}
               </div>
             </div>
 
@@ -104,6 +124,16 @@ export default function FeedbackPage() {
             </p>
           </div>
         </section>
+
+        {reviews.length > 0 && <section className="mx-auto w-full max-w-[850px] px-8 pb-14 md:px-10">
+          <h2 className="mb-6 font-serif text-2xl font-semibold text-[var(--green-dark)]">Traveller Reviews</h2>
+          <div className="grid gap-4">
+            {reviews.map(review => <article key={review.id} className="rounded-2xl border border-[var(--border-light)] bg-white p-6 shadow-sm">
+              <p className="font-semibold text-[var(--green-dark)]">{review.fullName} · {review.rating}/5</p>
+              <p className="mt-3 text-sm text-[var(--text-secondary)]">{review.message}</p>
+            </article>)}
+          </div>
+        </section>}
 
         {/* ==========================================
             DECORATIVE PATTERN — BOTTOM LEFT

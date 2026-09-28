@@ -9,11 +9,12 @@ export default function SectionTitle({
   subtitle,
   align = "center",
 }: SectionTitleProps) {
-  const alignment =
-    align === "center" ? "text-center" : "text-left";
-
   return (
-    <div className={alignment}>
+    <div
+      className={`w-full ${
+        align === "center" ? "mx-auto text-center" : "text-left"
+      }`}
+    >
       <h2 className="font-serif text-[30px] font-semibold text-[var(--green-dark)]">
         {title}
       </h2>
