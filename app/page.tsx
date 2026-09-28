@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -10,6 +11,8 @@ import ServiceCards from "@/components/home/ServiceCards";
 import DecorativePattern from "@/components/ui/DecorativePattern";
 import FeatureItem from "@/components/home/FeatureItem";
 import ScrollReveal from "@/components/ui/ScrollReveal";
+import HeroGallery from "@/components/home/HeroGallery";
+import { activeVehicles, vehicleCategory } from "@/src/server/vehicles";
 
 const services = [
   {
@@ -35,31 +38,11 @@ const services = [
   },
 ];
 
-const featuredVehicles = [
-  {
-    name: "Premium Sedan",
-    image: "/images/featuredvehicle1.png",
-    passengers: 4,
-    bags: 2,
-    href: "/customer/vehicles/premium-sedan",
-  },
-  {
-    name: "Executive Minivan",
-    image: "/images/featuredvehicle2.png",
-    passengers: 9,
-    bags: 6,
-    href: "/customer/vehicles/executive-minivan",
-  },
-  {
-    name: "Luxury SUV",
-    image: "/images/featuredvehicle3.png",
-    passengers: 6,
-    bags: 4,
-    href: "/customer/vehicles/luxury-suv",
-  },
-];
-
-export default function HomePage() {
+export default async function HomePage() {
+  const vehicles = await activeVehicles();
+  const featuredVehicles = (["Sedan", "SUV", "Bus"] as const).flatMap(category => vehicles.filter(vehicle => vehicleCategory(vehicle.name) === category).slice(0, 3)).map(vehicle => ({
+    name: vehicle.name, image: vehicle.imageUrl || "/images/vehicle-placeholder.svg", passengers: vehicle.passengerCapacity, bags: vehicle.luggageCapacity, href: `/customer/vehicles/${vehicle.id}`,
+  }));
   return (
     <>
       <Header />
@@ -67,16 +50,7 @@ export default function HomePage() {
       <main>
         {/* HERO */}
         <section className="relative min-h-[600px] overflow-hidden bg-[#092117] md:min-h-[650px]">
-          <video
-            autoPlay
-            muted
-            loop
-            playsInline
-            poster="/images/Hero Section.png"
-            className="absolute inset-0 h-full w-full object-cover object-center"
-          >
-            <source src="/videos/hero.mp4" type="video/mp4" />
-          </video>
+          <HeroGallery />
 
           {/* Stronger overlay on mobile so text stays readable */}
           <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(4,20,13,0.85)_0%,rgba(4,20,13,0.68)_100%)] md:bg-[linear-gradient(90deg,rgba(4,20,13,0.76)_0%,rgba(4,20,13,0.45)_45%,rgba(4,20,13,0.16)_100%)]" />
@@ -216,6 +190,7 @@ export default function HomePage() {
                       <div className="relative h-[195px] w-full overflow-hidden bg-white">
                         <Image
                           src={vehicle.image}
+                          unoptimized
                           alt={vehicle.name}
                           fill
                           className="object-cover transition-transform duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.035]"

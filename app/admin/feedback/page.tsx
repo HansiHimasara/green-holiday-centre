@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import AdminPageLayout from "@/components/admin/AdminPageLayout";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
@@ -12,38 +12,13 @@ type FeedbackStatus = "visible" | "hidden";
 
 type Feedback = {
   id: number;
+  isNew?: boolean;
   customer: string;
   rating: number;
   feedback: string;
   status: FeedbackStatus;
 };
 
-const initialFeedbacks: Feedback[] = [
-  {
-    id: 1,
-    customer: "Nimasha Perera",
-    rating: 5,
-    feedback:
-      "Our driver was professional and friendly. The journey was comfortable.",
-    status: "visible",
-  },
-  {
-    id: 2,
-    customer: "David Miller",
-    rating: 5,
-    feedback:
-      "Excellent transportation service. Everything was arranged perfectly.",
-    status: "visible",
-  },
-  {
-    id: 3,
-    customer: "Michael Thomas",
-    rating: 4,
-    feedback:
-      "Good experience overall. The vehicle was clean and comfortable.",
-    status: "hidden",
-  },
-];
 
 const inputClasses = `
   h-9
@@ -67,7 +42,15 @@ const inputClasses = `
 
 export default function AdminFeedbackPage() {
   const [feedbacks, setFeedbacks] =
-    useState<Feedback[]>(initialFeedbacks);
+    useState<Feedback[]>([]);
+  async function reload() {
+    const response = await fetch("/api/admin/feedback", { cache: "no-store" });
+    if (!response.ok) { window.alert("Unable to load feedback."); return; }
+    const data = await response.json();
+    setFeedbacks(data.feedback ?? []);
+  }
+  useEffect(() => { void reload(); }, []);
+
 
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -119,7 +102,7 @@ export default function AdminFeedbackPage() {
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!editingFeedback) return;
 
     if (
@@ -131,13 +114,13 @@ export default function AdminFeedbackPage() {
       return;
     }
 
-    setFeedbacks((currentFeedbacks) =>
-      currentFeedbacks.map((feedback) =>
-        feedback.id === editingId
-          ? editingFeedback
-          : feedback,
-      ),
-    );
+    const response = await fetch(`/api/admin/feedback${editingFeedback.isNew ? "" : `/` + editingId}`, {
+      method: editingFeedback.isNew ? "POST" : "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(editingFeedback),
+    });
+    if (!response.ok) { window.alert((await response.json()).error || "Save failed."); return; }
+    await reload();
 
     setEditingId(null);
     setEditingFeedback(null);
@@ -148,12 +131,10 @@ export default function AdminFeedbackPage() {
     setEditingFeedback(null);
   };
 
-  const handleDelete = (id: number) => {
-    setFeedbacks((currentFeedbacks) =>
-      currentFeedbacks.filter(
-        (feedback) => feedback.id !== id,
-      ),
-    );
+  const handleDelete = async (id: number) => {
+    const response = await fetch(`/api/admin/feedback/${id}`, { method: "DELETE" });
+    if (!response.ok) { window.alert((await response.json()).error || "Delete failed."); return; }
+    await reload();
 
     if (editingId === id) {
       setEditingId(null);
@@ -173,6 +154,7 @@ export default function AdminFeedbackPage() {
 
     const newFeedback: Feedback = {
       id: newId,
+      isNew: true,
       customer: "",
       rating: 5,
       feedback: "",

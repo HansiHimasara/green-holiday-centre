@@ -1,63 +1,92 @@
 import { NextResponse } from "next/server";
 
+import { db } from "@/src/prisma/db";
+
 import {
   calculateBookingPrice,
   type BookingPricingServiceType,
 } from "@/src/server/bookingPricing";
 
-export const runtime = "nodejs";
+export const runtime =
+  "nodejs";
 
-const validServiceTypes = new Set([
-  "AIRPORT_TRANSFER",
-  "DAY_TOUR",
-  "ROUND_TOUR",
-]);
+type ServiceType =
+  BookingPricingServiceType;
 
-type BookingQuoteRequestBody = {
-  serviceType?: unknown;
-  pricingId?: unknown;
-  pickupLocation?: unknown;
-  dropoffLocation?: unknown;
-  waypoints?: unknown;
-};
+const allowedServices:
+  ServiceType[] = [
+    "AIRPORT_TRANSFER",
+    "DAY_TOUR",
+    "ROUND_TOUR",
+  ];
 
-function readOptionalString(value: unknown) {
-  if (typeof value !== "string") {
-    return undefined;
-  }
-
-  const trimmedValue = value.trim();
-
-  return trimmedValue || undefined;
+function readText(
+  value: unknown
+) {
+  return String(
+    value ?? ""
+  ).trim();
 }
 
-function readWaypoints(value: unknown) {
+function readWaypoints(
+  value: unknown
+) {
   if (!Array.isArray(value)) {
     return [];
   }
 
   return value
-    .filter((item): item is string => typeof item === "string")
-    .map((item) => item.trim())
+    .map((location) =>
+      readText(location)
+    )
     .filter(Boolean);
 }
 
-export async function POST(request: Request) {
+export async function POST(
+  request: Request
+) {
   try {
     const body =
-      (await request.json()) as BookingQuoteRequestBody;
+      await request.json();
 
     const serviceType =
-      readOptionalString(body.serviceType);
+      readText(
+        body.serviceType
+      ) as ServiceType;
+
+    const vehicleTypeId =
+      Number(
+        body.vehicleTypeId
+      );
+
+    const pickupLocation =
+      readText(
+        body.pickupLocation
+      );
+
+    const dropoffLocation =
+      readText(
+        body.dropoffLocation
+      );
+
+    const waypoints =
+      readWaypoints(
+        body.waypoints
+      );
+
+    /* ==========================================
+       VALIDATION
+    ========================================== */
 
     if (
-      !serviceType ||
-      !validServiceTypes.has(serviceType)
+      !allowedServices.includes(
+        serviceType
+      )
     ) {
       return NextResponse.json(
         {
           error:
-            "A valid service type is required.",
+            "Please select a valid booking service.",
         },
         {
           status: 400,
@@ -65,42 +94,189 @@ export async function POST(request: Request) {
       );
     }
 
-    const pricingId =
-      Number(body.pricingId);
-
     if (
-      !Number.isInteger(pricingId) ||
-      pricingId <= 0
+      !Number.isInteger(
+        vehicleTypeId
+      ) ||
+      vehicleTypeId <= 0
     ) {
       return NextResponse.json(
         {
           error:
-            "A valid pricing route is required.",
+            "Please select a valid vehicle.",
         },
         {
           status: 400,
         }
       );
     }
+
+    if (!pickupLocation) {
+      return NextResponse.json(
+        {
+          error:
+            "Pickup location is required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (!dropoffLocation) {
+      return NextResponse.json(
+        {
+          error:
+            "Drop location is required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (
+      serviceType ===
+        "DAY_TOUR" &&
+      waypoints.length < 1
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "The Day Tour destination is required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (
+      serviceType ===
+        "ROUND_TOUR" &&
+      waypoints.length < 1
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "At least one Round Tour destination is required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    /* ==========================================
+       GET VEHICLE FROM DATABASE
+    ========================================== */
+
+    const vehicle =
+      await db.orm.public.VehicleType
+        .where({
+          id: vehicleTypeId,
+        })
+        .first();
+
+    if (!vehicle) {
+      return NextResponse.json(
+        {
+          error:
+            "The selected vehicle was not found.",
+        },
+        {
+          status: 404,
+        }
+      );
+    }
+
+    if (
+      vehicle.status !==
+      "ACTIVE"
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "The selected vehicle is not currently available.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    /*
+     * IMPORTANT:
+     *
+     * Customer does NOT send
+     * the vehicle rate.
+     *
+     * We read it from DB.
+     */
+    const vehicleRatePerKm =
+      Number(
+        vehicle.ratePerKm
+      );
+
+    if (
+      !Number.isFinite(
+        vehicleRatePerKm
+      ) ||
+      vehicleRatePerKm <= 0
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "A rate per kilometre has not been configured for this vehicle.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    /* ==========================================
+       CALCULATE PRICE
+    ========================================== */
 
     const result =
       await calculateBookingPrice({
-        serviceType:
-          serviceType as BookingPricingServiceType,
-        pricingId,
-        pickupLocation:
-          readOptionalString(
-            body.pickupLocation
-          ),
-        dropoffLocation:
-          readOptionalString(
-            body.dropoffLocation
-          ),
+        serviceType,
+
+        pickupLocation,
+
+        dropoffLocation,
+
         waypoints:
-          readWaypoints(body.waypoints),
+          serviceType ===
+          "AIRPORT_TRANSFER"
+            ? []
+            : waypoints,
+
+        vehicleRatePerKm,
       });
 
-    return NextResponse.json(result);
+    return NextResponse.json({
+      totalAmount:
+        result.totalAmount,
+
+      currency:
+        result.currency,
+
+      route: {
+        actualKilometres:
+          result.route
+            .actualKilometres,
+
+        billableKilometres:
+          result.route
+            .billableKilometres,
+
+        durationMinutes:
+          result.route
+            .durationMinutes,
+      },
+    });
   } catch (error) {
     console.error(
       "BOOKING QUOTE ERROR:",
@@ -110,21 +286,14 @@ export async function POST(request: Request) {
     const message =
       error instanceof Error
         ? error.message
-        : "Unable to calculate booking price.";
-
-    const status =
-      message.includes(
-        "OPENROUTESERVICE_API_KEY"
-      )
-        ? 500
-        : 400;
+        : "Unable to calculate transportation cost.";
 
     return NextResponse.json(
       {
         error: message,
       },
       {
-        status,
+        status: 400,
       }
     );
   }

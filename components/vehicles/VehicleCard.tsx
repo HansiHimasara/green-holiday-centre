@@ -40,6 +40,7 @@ export default function VehicleCard({
       <div className="relative h-[220px] w-full">
         <Image
           src={image}
+          unoptimized
           alt={name}
           fill
           className="object-cover"

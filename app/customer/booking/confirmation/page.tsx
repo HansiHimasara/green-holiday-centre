@@ -1,33 +1,48 @@
 "use client";
 
-import Link from "next/link";
-
 import {
   useEffect,
   useState,
 } from "react";
 
+import { useRouter } from "next/navigation";
+
 import BookingPageShell from "@/components/bookings/BookingPageShell";
-import StepIndicator from "@/components/bookings/StepIndicator";
-import SummaryRow from "@/components/bookings/SummaryRow";
+import BookingStepHeader from "@/components/bookings/BookingStepHeader";
+import ServiceTabs from "@/components/bookings/ServiceTabs";
 
 import Button from "@/components/ui/Button";
 
 import {
   getBookingDraft,
+  saveBookingDraft,
   type BookingDraft,
 } from "@/src/client/bookingDraft";
 
+type BookingQuoteResponse = {
+  totalAmount?: number | string;
+
+  currency?: string;
+
+  route?: {
+    actualKilometres?: number;
+    billableKilometres?: number;
+    durationMinutes?: number;
+  };
+
+  error?: string;
+};
+
 function formatTravelDate(
-  dateValue?: string
+  value?: string
 ) {
-  if (!dateValue) {
+  if (!value) {
     return "Not provided";
   }
 
   const date =
     new Date(
-      `${dateValue}T00:00:00`
+      `${value}T00:00:00`
     );
 
   if (
@@ -35,7 +50,7 @@ function formatTravelDate(
       date.getTime()
     )
   ) {
-    return dateValue;
+    return value;
   }
 
   return date.toLocaleDateString(
@@ -48,324 +63,1197 @@ function formatTravelDate(
   );
 }
 
-function getServiceName(
-  serviceType?: string
+function shortLocation(
+  value?: string
+) {
+  if (!value) {
+    return "";
+  }
+
+  return (
+    value
+      .split(",")[0]
+      ?.trim() ||
+    value.trim()
+  );
+}
+
+function serviceName(
+  booking: BookingDraft
 ) {
   if (
-    serviceType ===
+    booking.serviceType ===
     "AIRPORT_TRANSFER"
   ) {
     return "Airport Transfer";
   }
 
   if (
-    serviceType ===
+    booking.serviceType ===
     "DAY_TOUR"
   ) {
     return "Day Tour";
   }
 
   if (
-    serviceType ===
+    booking.serviceType ===
     "ROUND_TOUR"
   ) {
+    if (
+      booking.numberOfNights &&
+      booking.numberOfNights >
+        0
+    ) {
+      return `Round Tour — ${booking.numberOfNights} ${
+        booking.numberOfNights ===
+        1
+          ? "Night"
+          : "Nights"
+      }`;
+    }
+
     return "Round Tour";
   }
 
   return "Not provided";
 }
 
-function getDuration(
-  draft: BookingDraft
+function createPlannedRoute(
+  booking: BookingDraft
 ) {
+  const pickup =
+    shortLocation(
+      booking.pickupLocation
+    );
+
+  const drop =
+    shortLocation(
+      booking.dropoffLocation
+    );
+
+  const destinations =
+    (
+      booking.destinations ??
+      []
+    )
+      .map(
+        (location) =>
+          shortLocation(
+            location
+          )
+      )
+      .filter(Boolean);
+
   if (
-    draft.serviceType ===
+    booking.serviceType ===
     "AIRPORT_TRANSFER"
   ) {
-    return "Single Transfer";
+    return [
+      pickup,
+      drop,
+    ].filter(Boolean);
   }
 
   if (
-    draft.serviceType ===
+    booking.serviceType ===
     "DAY_TOUR"
   ) {
-    return "1 Day";
+    return [
+      pickup,
+      ...destinations,
+      drop,
+    ].filter(Boolean);
   }
 
   if (
-    draft.serviceType ===
-      "ROUND_TOUR" &&
-    draft.numberOfNights
+    booking.serviceType ===
+    "ROUND_TOUR"
   ) {
-    return `${draft.numberOfNights} ${
-      draft.numberOfNights ===
-      1
-        ? "Night"
-        : "Nights"
-    } / ${
-      draft.numberOfNights +
-      1
-    } Days`;
+    return [
+      pickup,
+      ...destinations,
+      drop,
+    ].filter(Boolean);
   }
 
-  return "Not provided";
+  return [];
 }
 
-export default function BookingConfirmationPage() {
+function money(
+  amount?: number,
+  currency?: string
+) {
+  if (
+    typeof amount !==
+      "number" ||
+    !Number.isFinite(
+      amount
+    ) ||
+    !currency
+  ) {
+    return "Calculating...";
+  }
+
+  return `${currency} ${amount.toLocaleString(
+    "en-LK",
+    {
+      maximumFractionDigits:
+        0,
+    }
+  )}`;
+}
+
+export default function BookingSummaryPage() {
+  const router =
+    useRouter();
+
+  /*
+   * IMPORTANT:
+   *
+   * Not nullable.
+   * This removes all of the
+   * "draft is possibly null"
+   * TypeScript errors.
+   */
   const [
-    draft,
-    setDraft,
+    booking,
+    setBooking,
   ] =
-    useState<BookingDraft | null>(
-      null
+    useState<BookingDraft>(
+      {}
     );
+
+  const [
+    loaded,
+    setLoaded,
+  ] = useState(false);
+
+  const [
+    confirmed,
+    setConfirmed,
+  ] = useState(false);
+
+  const [
+    quoteLoading,
+    setQuoteLoading,
+  ] = useState(false);
+
+  const [
+    quoteError,
+    setQuoteError,
+  ] = useState("");
+
+  const [
+    submitting,
+    setSubmitting,
+  ] = useState(false);
+
+  /* ==========================================
+     LOAD SAVED BOOKING
+  ========================================== */
 
   useEffect(() => {
-    const savedDraft =
-      getBookingDraft();
-
-    setDraft(
-      savedDraft
+    setBooking(
+      getBookingDraft()
     );
+
+    setLoaded(true);
   }, []);
 
-  if (!draft) {
+  /* ==========================================
+     GET BACKEND PRICE
+  ========================================== */
+
+  useEffect(() => {
+    if (!loaded) {
+      return;
+    }
+
+    if (
+      !booking.serviceType ||
+      !booking.vehicleTypeId ||
+      !booking.pickupLocation ||
+      !booking.dropoffLocation
+    ) {
+      setQuoteLoading(
+        false
+      );
+
+      setQuoteError(
+        "Travel details are incomplete."
+      );
+
+      return;
+    }
+
+    const serviceType =
+      booking.serviceType;
+
+    const vehicleTypeId =
+      booking.vehicleTypeId;
+
+    const pickupLocation =
+      booking.pickupLocation;
+
+    const dropoffLocation =
+      booking.dropoffLocation;
+
+    const destinations =
+      (
+        booking.destinations ??
+        []
+      )
+        .map(
+          (location) =>
+            location.trim()
+        )
+        .filter(Boolean);
+
+    let cancelled =
+      false;
+
+    async function loadPrice() {
+      try {
+        setQuoteLoading(
+          true
+        );
+
+        setQuoteError("");
+
+        const response =
+          await fetch(
+            "/api/booking-quote",
+            {
+              method:
+                "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+
+              body:
+                JSON.stringify(
+                  {
+                    serviceType,
+
+                    vehicleTypeId,
+
+                    pickupLocation,
+
+                    dropoffLocation,
+
+                    waypoints:
+                      serviceType ===
+                      "AIRPORT_TRANSFER"
+                        ? []
+                        : destinations,
+                  }
+                ),
+            }
+          );
+
+        const data =
+          (await response.json()) as BookingQuoteResponse;
+
+        if (
+          !response.ok
+        ) {
+          throw new Error(
+            data.error ||
+              "Unable to calculate transportation cost."
+          );
+        }
+
+        const amount =
+          Number(
+            data.totalAmount
+          );
+
+        if (
+          !Number.isFinite(
+            amount
+          ) ||
+          !data.currency
+        ) {
+          throw new Error(
+            "The server did not return a valid transportation cost."
+          );
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        const updates:
+          Partial<BookingDraft> =
+          {
+            totalAmount:
+              amount,
+
+            currency:
+              data.currency,
+
+            actualKilometres:
+              data.route
+                ?.actualKilometres,
+
+            routeDurationMinutes:
+              data.route
+                ?.durationMinutes,
+          };
+
+        saveBookingDraft(
+          updates
+        );
+
+        setBooking(
+          (previous) => ({
+            ...previous,
+            ...updates,
+          })
+        );
+      } catch (error) {
+        console.error(
+          "Quote error:",
+          error
+        );
+
+        if (!cancelled) {
+          setQuoteError(
+            error instanceof
+              Error
+              ? error.message
+              : "Unable to calculate transportation cost."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setQuoteLoading(
+            false
+          );
+        }
+      }
+    }
+
+    void loadPrice();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    loaded,
+    booking.serviceType,
+    booking.vehicleTypeId,
+    booking.pickupLocation,
+    booking.dropoffLocation,
+    booking.destinations,
+  ]);
+
+  /* ==========================================
+     LOADING
+  ========================================== */
+
+  if (!loaded) {
     return (
       <BookingPageShell>
         <section className="flex min-h-[500px] items-center justify-center bg-[#F8F7F1]">
-          <p className="text-[13px] text-[var(--text-secondary)]">
-            Loading booking confirmation...
+          <p className="text-sm text-[var(--text-secondary)]">
+            Loading booking
+            summary...
           </p>
         </section>
       </BookingPageShell>
     );
   }
 
-  const bookingReference =
-    draft.bookingReference ||
-    "Not Available";
+  /* ==========================================
+     SERVICE TAB
+  ========================================== */
 
-  const customerName =
-    draft.customer?.fullName ||
-    "Not provided";
+  const serviceTab:
+    | "airport-transfer"
+    | "day-tour"
+    | "round-tour" =
+    booking.serviceType ===
+    "DAY_TOUR"
+      ? "day-tour"
+      : booking.serviceType ===
+          "ROUND_TOUR"
+        ? "round-tour"
+        : "airport-transfer";
 
-  const serviceName =
-    getServiceName(
-      draft.serviceType
+  const plannedRoute =
+    createPlannedRoute(
+      booking
     );
 
-  const vehicleName =
-    draft.vehicleName ||
-    "Not provided";
+  const summaryItems = [
+    {
+      label: "Tour Type",
 
-  const travelDate =
-    formatTravelDate(
-      draft.travelDate
-    );
+      value:
+        serviceName(
+          booking
+        ),
+    },
 
-  const duration =
-    getDuration(
-      draft
-    );
+    {
+      label:
+        "Selected Vehicle",
 
-  const totalAmount =
-    draft.totalAmount ??
-    850;
+      value:
+        booking.vehicleName ||
+        "Not provided",
+    },
 
-  const currency =
-    draft.currency ??
-    "USD";
+    {
+      label:
+        "Travel Date",
+
+      value:
+        formatTravelDate(
+          booking.travelDate
+        ),
+    },
+
+    {
+      label:
+        "Total Passengers",
+
+      value:
+        typeof booking.passengerCount ===
+        "number"
+          ? `${booking.passengerCount} ${
+              booking.passengerCount ===
+              1
+                ? "Passenger"
+                : "Passengers"
+            }`
+          : "Not provided",
+    },
+
+    {
+      label:
+        "Luggage Requirement",
+
+      value:
+        typeof booking.luggageCount ===
+        "number"
+          ? `${booking.luggageCount} ${
+              booking.luggageCount ===
+              1
+                ? "Bag"
+                : "Bags"
+            }`
+          : "Not provided",
+    },
+  ];
+
+  /* ==========================================
+     CONTINUE TO PAYMENT
+  ========================================== */
+
+  async function handleContinueToPayment() {
+    if (!confirmed) {
+      window.alert(
+        "Please confirm that the details above are correct."
+      );
+
+      return;
+    }
+
+    if (
+      !booking.serviceType ||
+      !booking.vehicleTypeId ||
+      !booking.travelDate ||
+      !booking.pickupLocation ||
+      !booking.dropoffLocation ||
+      !booking.passengerCount
+    ) {
+      window.alert(
+        "Your travel details are incomplete."
+      );
+
+      return;
+    }
+
+    if (
+      booking.luggageCount ===
+      undefined
+    ) {
+      window.alert(
+        "Luggage requirement is missing."
+      );
+
+      return;
+    }
+
+    if (
+      booking.serviceType ===
+        "DAY_TOUR" &&
+      !booking.destinations?.[0]?.trim()
+    ) {
+      window.alert(
+        "The Day Tour destination is missing."
+      );
+
+      return;
+    }
+
+    if (
+      booking.serviceType ===
+      "ROUND_TOUR"
+    ) {
+      if (
+        !booking.destinations ||
+        booking.destinations
+          .length === 0 ||
+        booking.destinations.some(
+          (location) =>
+            !location.trim()
+        )
+      ) {
+        window.alert(
+          "One or more Round Tour destinations are missing."
+        );
+
+        return;
+      }
+    }
+
+    const customer =
+      booking.customer;
+
+    if (!customer) {
+      window.alert(
+        "Please complete your personal details."
+      );
+
+      return;
+    }
+
+    if (
+      !customer.fullName.trim() ||
+      !customer.email.trim() ||
+      !customer.phone.trim() ||
+      !customer.passportNumber.trim()
+    ) {
+      window.alert(
+        "Full name, email, WhatsApp contact number and passport number are required."
+      );
+
+      return;
+    }
+
+    if (quoteLoading) {
+      window.alert(
+        "Please wait until the transportation cost is calculated."
+      );
+
+      return;
+    }
+
+    if (
+      quoteError ||
+      typeof booking.totalAmount !==
+        "number" ||
+      !booking.currency
+    ) {
+      window.alert(
+        quoteError ||
+          "Transportation cost is unavailable."
+      );
+
+      return;
+    }
+
+    /*
+     * Avoid duplicate booking
+     * creation.
+     */
+    if (
+      booking.bookingId &&
+      booking.bookingReference
+    ) {
+      router.push(
+        "/customer/booking/payment"
+      );
+
+      return;
+    }
+
+    try {
+      setSubmitting(
+        true
+      );
+
+      const response =
+        await fetch(
+          "/api/bookings",
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            /*
+             * Do NOT send price.
+             *
+             * /api/bookings
+             * calculates it again.
+             */
+            body:
+              JSON.stringify(
+                {
+                  serviceType:
+                    booking.serviceType,
+
+                  vehicleTypeId:
+                    booking.vehicleTypeId,
+
+                  travelDate:
+                    booking.travelDate,
+
+                  returnDate:
+                    booking.returnDate,
+
+                  passengerCount:
+                    booking.passengerCount,
+
+                  luggageCount:
+                    booking.luggageCount,
+
+                  numberOfNights:
+                    booking.numberOfNights,
+
+                  pickupLocation:
+                    booking.pickupLocation,
+
+                  dropoffLocation:
+                    booking.dropoffLocation,
+
+                  flightNumber:
+                    booking.flightNumber,
+
+                  specialRequests:
+                    booking.specialRequests,
+
+                  destinations:
+                    booking.destinations ??
+                    [],
+
+                  customer: {
+                    fullName:
+                      customer.fullName,
+
+                    email:
+                      customer.email,
+
+                    phone:
+                      customer.phone,
+
+                    passportNumber:
+                      customer.passportNumber,
+
+                    nationality:
+                      customer.nationality,
+
+                    address:
+                      customer.address,
+
+                    specialRequirements:
+                      customer.specialRequirements,
+                  },
+                }
+              ),
+          }
+        );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        window.alert(
+          data.error ||
+            "Unable to create the booking."
+        );
+
+        return;
+      }
+
+      if (!data.booking) {
+        window.alert(
+          "Booking could not be created."
+        );
+
+        return;
+      }
+
+      const amount =
+        Number(
+          data.booking
+            .totalAmount
+        );
+
+      const updates:
+        Partial<BookingDraft> =
+        {
+          bookingId:
+            data.booking.id,
+
+          bookingReference:
+            data.booking
+              .bookingReference,
+
+          totalAmount:
+            Number.isFinite(
+              amount
+            )
+              ? amount
+              : booking.totalAmount,
+
+          currency:
+            data.booking
+              .currency ||
+            booking.currency,
+
+          actualKilometres:
+            typeof data.booking
+              .actualKilometres ===
+              "number"
+              ? data.booking
+                  .actualKilometres
+              : booking.actualKilometres,
+
+          routeDurationMinutes:
+            typeof data.booking
+              .routeDurationMinutes ===
+              "number"
+              ? data.booking
+                  .routeDurationMinutes
+              : booking.routeDurationMinutes,
+        };
+
+      saveBookingDraft(
+        updates
+      );
+
+      setBooking(
+        (previous) => ({
+          ...previous,
+          ...updates,
+        })
+      );
+
+      router.push(
+        "/customer/booking/payment"
+      );
+    } catch (error) {
+      console.error(
+        "Create booking error:",
+        error
+      );
+
+      window.alert(
+        "Something went wrong while creating your booking."
+      );
+    } finally {
+      setSubmitting(
+        false
+      );
+    }
+  }
 
   return (
     <BookingPageShell>
-      {/* ==========================================
-          PAGE HEADER
-      ========================================== */}
-      <section className="bg-white">
-        <div className="mx-auto w-full max-w-[1180px] px-8 pt-8 md:px-10">
-          <div className="flex items-center justify-between gap-8 border-b border-[var(--border-light)] pb-6">
-            {/* LEFT — PAGE HEADING */}
-            <div>
-              <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-[var(--green-primary)]">
-                Almost Complete
-              </p>
+      {/* TOP */}
 
-              <h1 className="mt-1 font-[var(--font-display)] text-[36px] font-semibold leading-tight text-[var(--green-dark)]">
-                Booking Confirmation
-              </h1>
-            </div>
+      <section className="relative overflow-hidden bg-white">
+        <div className="relative z-10">
 
-            {/* RIGHT — STEP INDICATOR */}
-            <div className="shrink-0">
-              <StepIndicator
-                current={4}
-                total={4}
+          <div className="mx-auto w-full max-w-[1280px] px-6 pt-7 md:px-10">
+            <ServiceTabs
+              active={
+                serviceTab
+              }
+            />
+          </div>
+
+          <div className="mt-10 border-b border-[var(--border-light)]">
+            <div className="mx-auto w-full max-w-[1280px] px-6 pb-6 md:px-10">
+
+              <BookingStepHeader
+                title="Booking Summary"
+                step={3}
+                totalSteps={4}
               />
+
             </div>
           </div>
+
         </div>
       </section>
 
-      {/* ==========================================
-          CONFIRMATION CONTENT
-      ========================================== */}
-      <section className="bg-[#F8F7F1] py-9 md:py-10">
-        <div className="mx-auto w-full max-w-[760px] px-6 md:px-0">
-          {/* SUCCESS MESSAGE */}
-          <div className="text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--green-primary)] text-[24px] font-bold text-white shadow-[0_6px_18px_rgba(67,150,70,0.20)]">
-              ✓
-            </div>
+      {/* SUMMARY */}
 
-            <br></br>
+      <section className="bg-[#F8F7F1] py-10">
+        <div className="mx-auto w-full max-w-[1280px] px-6 md:px-10">
 
-            <h2 className="mt-4 font-[var(--font-display)] text-[28px] font-semibold text-[var(--green-dark)]">
-              Booking Confirmed!
-            </h2>
+          <div className="overflow-hidden rounded-2xl border border-[var(--border-light)] bg-white shadow-[0_15px_45px_rgba(7,91,69,0.08)]">
 
-            <p className="mt-1 text-[13px] text-[var(--text-secondary)]">
-              Thank you for choosing Green Holiday.
-            </p>
-          </div>
+            {/* HEADER */}
 
-          {/* ==========================================
-              CONFIRMATION CARD
-          ========================================== */}
-          <div className="mt-6 overflow-hidden rounded-2xl border border-[var(--border-light)] bg-white shadow-[0_15px_40px_rgba(7,91,69,0.08)]">
-            {/* CARD HEADER */}
-            <div className="bg-[var(--green-dark)] px-6 py-5 md:px-7">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--yellow-golden)]">
-                    Reservation Details
-                  </p>
+            <div className="relative overflow-hidden bg-[var(--green-deep)] px-6 py-6 md:px-8">
 
-                  <h3 className="mt-1 font-[var(--font-display)] text-[23px] font-semibold !text-white">
-                    {bookingReference}
-                  </h3>
-                </div>
+              <div className="absolute -right-8 -top-12 h-32 w-32 rounded-full bg-[var(--yellow-golden)]/20" />
 
-                <span className="rounded-full bg-[var(--yellow-golden)] px-3 py-1.5 text-[9px] font-extrabold uppercase tracking-[0.08em] text-[var(--green-dark)]">
-                  Confirmed
-                </span>
-              </div>
-            </div>
+              <div className="absolute -bottom-16 right-20 h-36 w-36 rounded-full bg-[var(--sky-blue)]/15" />
 
-            {/* DETAILS */}
-            <div className="px-6 py-6 md:px-7">
-              <div className="space-y-3.5">
-                <SummaryRow
-                  label="Customer Name"
-                  value={customerName}
-                />
+              <div className="relative z-10">
 
-                <SummaryRow
-                  label="Service"
-                  value={serviceName}
-                />
-
-                <SummaryRow
-                  label="Vehicle"
-                  value={vehicleName}
-                />
-
-                <SummaryRow
-                  label="Travel Date"
-                  value={travelDate}
-                />
-
-                <SummaryRow
-                  label="Duration"
-                  value={duration}
-                />
-              </div>
-
-              {/* AMOUNT */}
-              <div className="mt-5 rounded-xl border border-[var(--yellow-golden)]/35 bg-[var(--yellow-warm)]/[0.10] px-5 py-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-[var(--green-dark)]">
-                      Booking Amount
-                    </p>
-
-                    <p className="mt-0.5 text-[11px] text-[var(--text-secondary)]">
-                      Transportation cost
-                    </p>
-                  </div>
-
-                  <div className="flex items-baseline gap-1">
-                    <span className="font-serif text-[24px] font-bold text-[var(--green-dark)]">
-                      $
-                      {totalAmount.toFixed(
-                        2
-                      )}
-                    </span>
-
-                    <span className="text-[10px] font-bold text-[var(--sky-blue)]">
-                      {currency}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* BOOKING REFERENCE NOTICE */}
-              <div className="mt-4 rounded-lg border border-[var(--sky-blue)]/20 bg-[var(--sky-blue)]/[0.04] px-4 py-3">
-                <p className="text-[11px] leading-5 text-[var(--text-secondary)]">
-                  Please keep your booking reference{" "}
-                  <span className="font-bold text-[var(--green-dark)]">
-                    {bookingReference}
-                  </span>{" "}
-                  for future communication.
+                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/80">
+                  Your Journey
                 </p>
+
+                <h2 className="mt-2 font-serif text-[24px] font-semibold !text-white">
+                  Review Your Travel
+                  Details
+                </h2>
+
+                <p className="mt-1 text-[13px] text-white/70">
+                  Please review your
+                  booking before
+                  continuing to
+                  payment.
+                </p>
+
               </div>
+
+              <div className="relative z-10 mt-5 flex gap-2">
+
+                <span className="h-1.5 w-10 rounded-full bg-[var(--green-light)]" />
+
+                <span className="h-1.5 w-6 rounded-full bg-[var(--yellow-golden)]" />
+
+                <span className="h-1.5 w-8 rounded-full bg-[var(--sky-blue)]" />
+
+              </div>
+
             </div>
+
+            {/* CONTENT */}
+
+            <div className="p-6 md:p-8">
+
+              {/* DETAILS */}
+
+              <div className="overflow-hidden rounded-xl border border-[var(--green-primary)]/15">
+
+                {summaryItems.map(
+                  (
+                    item,
+                    index
+                  ) => (
+                    <div
+                      key={
+                        item.label
+                      }
+                      className={`
+                        px-5
+                        py-4
+                        sm:grid
+                        sm:grid-cols-[220px_1fr]
+                        sm:items-center
+                        sm:gap-6
+
+                        ${
+                          index !==
+                          summaryItems.length -
+                            1
+                            ? "border-b border-[var(--border-light)]"
+                            : ""
+                        }
+
+                        ${
+                          index %
+                            2 ===
+                          0
+                            ? "bg-[var(--green-primary)]/[0.025]"
+                            : "bg-white"
+                        }
+                      `}
+                    >
+
+                      <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--green-dark)]">
+                        {
+                          item.label
+                        }
+                      </span>
+
+                      <span className="text-[14px] font-semibold text-[var(--text-primary)]">
+                        {
+                          item.value
+                        }
+                      </span>
+
+                    </div>
+                  )
+                )}
+
+              </div>
+
+              {/* PLANNED ROUTE */}
+
+              <div className="mt-7">
+
+                <h3 className="mb-4 text-[16px] font-bold text-[var(--green-dark)]">
+                  Planned Route
+                </h3>
+
+                <div className="overflow-hidden rounded-xl border border-[var(--border-light)] bg-white">
+
+                  {plannedRoute.map(
+                    (
+                      location,
+                      index
+                    ) => {
+                      const first =
+                        index === 0;
+
+                      const last =
+                        index ===
+                        plannedRoute.length -
+                          1;
+
+                      let label =
+                        `Stop ${index}`;
+
+                      if (first) {
+                        label =
+                          "Pickup";
+                      } else if (last) {
+                        label =
+                          "Final Drop";
+                      } else if (
+                        booking.serviceType ===
+                        "DAY_TOUR"
+                      ) {
+                        label =
+                          "Tour Destination";
+                      } else if (
+                        booking.serviceType ===
+                        "ROUND_TOUR"
+                      ) {
+                        label =
+                          `Night ${index} Destination`;
+                      }
+
+                      return (
+                        <div
+                          key={`${location}-${index}`}
+                          className="flex gap-4 border-b border-[var(--border-light)] px-5 py-4 last:border-b-0"
+                        >
+
+                          <div className="flex w-4 justify-center">
+
+                            <span
+                              className={`
+                                mt-1
+                                h-3
+                                w-3
+                                rounded-full
+
+                                ${
+                                  first
+                                    ? "bg-[var(--green-primary)]"
+                                    : last
+                                      ? "bg-[var(--yellow-golden)]"
+                                      : "bg-[var(--sky-blue)]"
+                                }
+                              `}
+                            />
+
+                          </div>
+
+                          <div>
+
+                            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+                              {
+                                label
+                              }
+                            </p>
+
+                            <p className="mt-1 text-[14px] font-semibold text-[var(--text-primary)]">
+                              {
+                                location
+                              }
+                            </p>
+
+                          </div>
+
+                        </div>
+                      );
+                    }
+                  )}
+
+                </div>
+
+              </div>
+
+              {/*
+                NO CALCULATED DISTANCE IS DISPLAYED.
+
+                The backend still calculates it
+                because it is needed for pricing.
+
+                This also satisfies your Round Tour
+                requirement.
+              */}
+
+              {/* TOTAL PRICE */}
+
+              <div className="relative mt-7 overflow-hidden rounded-xl border border-[var(--yellow-golden)]/40 bg-[var(--yellow-warm)]/[0.13] px-5 py-5 md:px-6">
+
+                <div className="relative z-10 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+
+                  <div>
+
+                    <p className="text-[13px] font-bold text-[var(--green-dark)]">
+                      Total
+                      Transportation
+                      Cost
+                    </p>
+
+                    <p className="mt-1 text-[12px] text-[var(--text-secondary)]">
+
+                      {quoteLoading
+                        ? "Calculating transportation cost..."
+                        : quoteError
+                          ? quoteError
+                          : "Calculated using your route and selected vehicle."}
+
+                    </p>
+
+                  </div>
+
+                  <span className="font-serif text-[26px] font-bold text-[var(--green-dark)]">
+
+                    {quoteError
+                      ? "Unavailable"
+                      : money(
+                          booking.totalAmount,
+                          booking.currency
+                        )}
+
+                  </span>
+
+                </div>
+
+              </div>
+
+              {/* CONFIRM */}
+
+              <label
+                className={`
+                  mt-6
+                  flex
+                  cursor-pointer
+                  items-start
+                  gap-3
+                  rounded-lg
+                  border
+                  px-4
+                  py-4
+                  text-[12px]
+
+                  ${
+                    confirmed
+                      ? "border-[var(--green-primary)] bg-[var(--green-primary)]/[0.05]"
+                      : "border-[var(--border-light)] bg-[var(--surface-soft)]"
+                  }
+                `}
+              >
+
+                <input
+                  type="checkbox"
+                  checked={
+                    confirmed
+                  }
+                  onChange={(
+                    event
+                  ) =>
+                    setConfirmed(
+                      event.target
+                        .checked
+                    )
+                  }
+                  className="mt-[2px] h-4 w-4 accent-[var(--green-primary)]"
+                />
+
+                <span>
+                  I confirm that the
+                  details above are
+                  correct and I agree
+                  to submit this
+                  reservation request.
+                </span>
+
+              </label>
+
+              {/* BUTTONS */}
+
+              <div className="mt-7 flex items-center justify-between">
+
+                <Button
+                  href="/customer/booking/customer-details"
+                  variant="outline"
+                >
+                  Back
+                </Button>
+
+                <Button
+                  onClick={() =>
+                    void handleContinueToPayment()
+                  }
+                  disabled={
+                    !confirmed ||
+                    submitting ||
+                    quoteLoading ||
+                    Boolean(
+                      quoteError
+                    )
+                  }
+                  className="
+                    min-w-[190px]
+                    !bg-[var(--green-primary)]
+                    !text-white
+                    hover:!bg-[var(--green-dark)]
+                    disabled:cursor-not-allowed
+                    disabled:opacity-50
+                  "
+                >
+
+                  {submitting
+                    ? "Creating Booking..."
+                    : quoteLoading
+                      ? "Calculating..."
+                      : "Continue to Payment"}
+
+                </Button>
+
+              </div>
+
+            </div>
+
           </div>
 
-          {/* ==========================================
-              ACTION BUTTONS
-          ========================================== */}
-          <div className="mt-5 flex flex-wrap justify-center gap-3">
-            <Button
-              href="/"
-              className="
-                min-w-[140px]
-                !bg-[var(--green-dark)]
-                !text-white
-                hover:!bg-[var(--green-forest)]
-              "
-            >
-              Back to Home
-            </Button>
-
-            <Button
-              href="/customer/feedback"
-              variant="outline"
-              className="
-                min-w-[140px]
-                !border-[var(--green-primary)]
-                !text-[var(--green-dark)]
-                hover:!bg-[var(--green-primary)]
-                hover:!text-white
-              "
-            >
-              Give Your Feedback
-            </Button>
-          </div>
-
-          {/* CONTACT */}
-          <br></br>
-
-          <p className="mt-4 text-center text-[11px] text-[var(--text-muted)]">
-            Need help with your booking?{" "}
-            <Link
-              href="/customer/contact"
-              className="font-semibold text-[var(--green-primary)] hover:text-[var(--green-dark)] hover:underline"
-            >
-              Contact us
-            </Link>
-          </p>
         </div>
       </section>
+
     </BookingPageShell>
   );
 }

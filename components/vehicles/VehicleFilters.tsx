@@ -39,13 +39,14 @@ export default function VehicleFilters() {
 
         {/* Filters */}
         <div className="rounded-2xl border border-white/15 bg-white/10 p-5 backdrop-blur-sm md:p-6">
-          <div className="flex flex-wrap items-end gap-5">
+          <form action="/customer/vehicles" method="get" className="flex flex-wrap items-end gap-5">
             {/* Vehicle type */}
             <div>
               <label className="mb-2 block text-sm font-semibold text-white">
                 Vehicle Type
               </label>
               <Select
+                name="category"
                 placeholder="All Categories"
                 options={[
                   { label: "Sedan", value: "sedan" },
@@ -62,6 +63,7 @@ export default function VehicleFilters() {
                 Passengers
               </label>
               <Select
+                name="passengers"
                 placeholder="Any Passenger Count"
                 options={[
                   { label: "1 - 4", value: "1-4" },
@@ -77,6 +79,7 @@ export default function VehicleFilters() {
                 Luggage
               </label>
               <Select
+                name="luggage"
                 placeholder="Any Luggage Capacity"
                 options={[
                   {
@@ -97,7 +100,7 @@ export default function VehicleFilters() {
 
             {/* Filter button */}
             <button
-              type="button"
+              type="submit"
               className="
                 h-[50px]
                 rounded-xl
@@ -116,7 +119,7 @@ export default function VehicleFilters() {
             >
               Find Vehicle
             </button>
-          </div>
+          </form>
         </div>
       </div>
     </div>

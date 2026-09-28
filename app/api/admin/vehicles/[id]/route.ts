@@ -119,6 +119,11 @@ export async function PATCH(
         body.status ?? ""
       ).toUpperCase();
 
+    const rate = Number(String(body.rate ?? "").replace(/[^0-9.]/g, ""));
+    const photo = String(body.imageUrl ?? "").trim();
+    if (!Number.isInteger(rate) || rate <= 0 || (photo && !/^https:\/\/[^\s]+$/.test(photo) && !/^\/images\/[^\s]+$/.test(photo))) {
+      return NextResponse.json({ error: "Enter a positive whole-number LKR/km rate and a valid HTTPS photo URL." }, { status: 400 });
+    }
     if (!name) {
       return NextResponse.json(
         {
@@ -232,6 +237,8 @@ export async function PATCH(
               body.description
             ),
 
+          ratePerKm: Number(String(body.rate ?? "").replace(/[^0-9.]/g, "")),
+          imageUrl: optionalText(body.imageUrl),
           status,
         });
 
@@ -286,8 +293,8 @@ export async function PATCH(
             .description ??
           "",
 
-        rate:
-          "",
+        rate: `Rs. ${updatedVehicle.ratePerKm}/km`,
+        imageUrl: updatedVehicle.imageUrl ?? "",
 
         status:
           updatedVehicle.status

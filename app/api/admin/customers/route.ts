@@ -72,6 +72,8 @@ export async function GET() {
 
           contact:
             customer.phone,
+
+          createdAt: customer.createdAt,
         }))
         .sort(
           (a, b) =>

@@ -1636,6 +1636,13 @@
                   "kind": "scalar"
                 }
               },
+              "ratePerKm": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
               "status": {
                 "nullable": false,
                 "type": {
@@ -1715,6 +1722,9 @@
                 },
                 "passengerCapacity": {
                   "column": "passengerCapacity"
+                },
+                "ratePerKm": {
+                  "column": "ratePerKm"
                 },
                 "status": {
                   "column": "status"
@@ -2899,6 +2909,15 @@
                   "nativeType": "int4",
                   "nullable": false
                 },
+                "ratePerKm": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
                 "status": {
                   "codecId": "pg/text@1",
                   "default": {
@@ -3011,7 +3030,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "84e761eeb0b2b7c3e9f43ebed2c65ff08a4fdc17ab8f230f6d1704a078ea57ff"
+    "storageHash": "338e3b0eb347812714f2b5a02870a37ad22ecbb6da5f3a36cb5eccbd69ab19b9"
   },
   "execution": {
     "executionHash": "4a2275a714614d4fb10c5905b72ddaef973f651a44f4e86f0e384bf22db79bde",

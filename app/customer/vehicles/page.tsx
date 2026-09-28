@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 
@@ -5,43 +6,21 @@ import PageTitle from "@/components/common/PageTitle";
 import VehicleFilters from "@/components/vehicles/VehicleFilters";
 import VehicleCard from "@/components/vehicles/VehicleCard";
 import DecorativePattern from "@/components/ui/DecorativePattern";
+import { activeVehicles, vehicleCategory } from "@/src/server/vehicles";
 
-const vehicles = [
-  {
-    name: "Premium Hybrid Sedan",
-    image: "/images/featuredvehicle1.png",
-    passengers: 4,
-    luggage: 2,
-    category: "Sedan",
-    href: "/customer/vehicles/premium-hybrid-sedan",
-  },
-  {
-    name: "Executive SUV",
-    image: "/images/featuredvehicle2.png",
-    passengers: 6,
-    luggage: 4,
-    category: "SUV",
-    href: "/customer/vehicles/executive-suv",
-  },
-  {
-    name: "Standard Hybrid Sedan",
-    image: "/images/featuredvehicle3.png",
-    passengers: 4,
-    luggage: 2,
-    category: "Sedan",
-    href: "/customer/vehicles/standard-hybrid-sedan",
-  },
-  {
-    name: "Luxury Minivan",
-    image: "/images/featuredvehicle2.png",
-    passengers: 9,
-    luggage: 6,
-    category: "Minivan",
-    href: "/customer/vehicles/luxury-minivan",
-  },
-];
-
-export default function VehiclesPage() {
+export default async function VehiclesPage({ searchParams }: { searchParams: Promise<{ category?: string; passengers?: string; luggage?: string }> }) {
+  const filters = await searchParams;
+  const rows = await activeVehicles();
+  const vehicles = rows.filter(vehicle => {
+    const category = vehicleCategory(vehicle.name);
+    const matchesCategory = !filters.category || category.toLowerCase() === filters.category.toLowerCase();
+    const passengerRange = filters.passengers === "1-4" ? [1, 4] : filters.passengers === "5-9" ? [5, 9] : filters.passengers === "10+" ? [10, Infinity] : [0, Infinity];
+    const luggageRange = filters.luggage === "1-3" ? [1, 3] : filters.luggage === "4-6" ? [4, 6] : filters.luggage === "7+" ? [7, Infinity] : [0, Infinity];
+    return matchesCategory && vehicle.passengerCapacity >= passengerRange[0] && vehicle.passengerCapacity <= passengerRange[1]
+      && vehicle.luggageCapacity >= luggageRange[0] && vehicle.luggageCapacity <= luggageRange[1];
+  }).map(vehicle => ({
+    name: vehicle.name, image: vehicle.imageUrl || "/images/vehicle-placeholder.svg", passengers: vehicle.passengerCapacity, luggage: vehicle.luggageCapacity, category: vehicleCategory(vehicle.name), href: `/customer/vehicles/${vehicle.id}`,
+  }));
   return (
     <>
       <Header />
@@ -99,7 +78,7 @@ export default function VehiclesPage() {
           <div className="grid gap-8 md:grid-cols-2">
             {vehicles.map((vehicle) => (
               <VehicleCard
-                key={vehicle.name}
+                key={vehicle.href}
                 name={vehicle.name}
                 image={vehicle.image}
                 passengers={vehicle.passengers}

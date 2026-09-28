@@ -86,8 +86,8 @@ export async function GET() {
             vehicle.status
               .toLowerCase(),
 
-          rate:
-            "",
+          rate: `Rs. ${vehicle.ratePerKm}/km`,
+          imageUrl: vehicle.imageUrl ?? "",
         }))
         .sort(
           (a, b) =>
@@ -172,6 +172,11 @@ export async function POST(
         body.status ?? "active"
       ).toUpperCase();
 
+    const rate = Number(String(body.rate ?? "").replace(/[^0-9.]/g, ""));
+    const photo = String(body.imageUrl ?? "").trim();
+    if (!Number.isInteger(rate) || rate <= 0 || (photo && !/^https:\/\/[^\s]+$/.test(photo) && !/^\/images\/[^\s]+$/.test(photo))) {
+      return NextResponse.json({ error: "Enter a positive whole-number LKR/km rate and a valid HTTPS photo URL." }, { status: 400 });
+    }
     if (!name) {
       return NextResponse.json(
         {
@@ -271,9 +276,8 @@ export async function POST(
           chauffeurLanguage:
             null,
 
-          imageUrl:
-            null,
-
+          imageUrl: optionalText(body.imageUrl),
+          ratePerKm: Number(String(body.rate ?? "").replace(/[^0-9.]/g, "")),
           status,
         }
       );
@@ -325,8 +329,8 @@ export async function POST(
             vehicle.description ??
             "",
 
-          rate:
-            "",
+          rate: `Rs. ${vehicle.ratePerKm}/km`,
+          imageUrl: vehicle.imageUrl ?? "",
 
           status:
             vehicle.status

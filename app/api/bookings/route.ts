@@ -1,137 +1,189 @@
+import { sendBookingEmail } from "@/src/server/email/booking";
+import { paymentLinkToken } from "@/src/server/bookingLinks";
+import { validBookingDate, earliestBookingDate } from "@/src/server/bookingDates";
 import { randomBytes } from "node:crypto";
 
 import { NextResponse } from "next/server";
 
 import { db } from "@/src/prisma/db";
+
 import {
   calculateBookingPrice,
   type BookingPricingServiceType,
 } from "@/src/server/bookingPricing";
 
-export const runtime = "nodejs";
+export const runtime =
+  "nodejs";
 
 type ServiceType =
-  | "AIRPORT_TRANSFER"
-  | "DAY_TOUR"
-  | "ROUND_TOUR";
+  BookingPricingServiceType;
 
-const allowedServices: ServiceType[] = [
-  "AIRPORT_TRANSFER",
-  "DAY_TOUR",
-  "ROUND_TOUR",
-];
+const allowedServices:
+  ServiceType[] = [
+    "AIRPORT_TRANSFER",
+    "DAY_TOUR",
+    "ROUND_TOUR",
+  ];
 
 function createBookingReference() {
-  const now = new Date();
+  const now =
+    new Date();
 
-  const year = now.getFullYear();
+  const year =
+    now.getFullYear();
 
-  const month = String(
-    now.getMonth() + 1
-  ).padStart(2, "0");
+  const month =
+    String(
+      now.getMonth() + 1
+    ).padStart(
+      2,
+      "0"
+    );
 
-  const day = String(
-    now.getDate()
-  ).padStart(2, "0");
+  const day =
+    String(
+      now.getDate()
+    ).padStart(
+      2,
+      "0"
+    );
 
-  const randomPart = randomBytes(3)
-    .toString("hex")
-    .toUpperCase();
+  const randomPart =
+    randomBytes(3)
+      .toString("hex")
+      .toUpperCase();
 
   return `GH-${year}${month}${day}-${randomPart}`;
 }
 
-function optionalText(value: unknown) {
-  const text = String(value ?? "").trim();
+function readText(
+  value: unknown
+) {
+  return String(
+    value ?? ""
+  ).trim();
+}
+
+function optionalText(
+  value: unknown
+) {
+  const text =
+    readText(value);
 
   return text || null;
 }
 
-function optionalString(value: unknown) {
-  const text = String(value ?? "").trim();
+function readDestinations(
+  value: unknown
+) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
 
-  return text || undefined;
-}
-
-function readDestinations(value: unknown) {
-  return Array.isArray(value)
-    ? value
-        .map((destination: unknown) =>
-          String(destination ?? "").trim()
-        )
-        .filter(Boolean)
-    : [];
-}
-
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-
-    const customer = body.customer ?? {};
-
-    const fullName = String(
-      customer.fullName ?? ""
-    ).trim();
-
-    const email = String(
-      customer.email ?? ""
+  return value
+    .map((destination) =>
+      readText(destination)
     )
-      .trim()
-      .toLowerCase();
+    .filter(Boolean);
+}
 
-    const phone = String(
-      customer.phone ?? ""
-    ).trim();
+export async function POST(
+  request: Request
+) {
+  try {
+    const body =
+      await request.json();
 
-    const vehicleTypeId = Number(
-      body.vehicleTypeId
-    );
+    const customer =
+      body.customer ?? {};
 
-    const serviceType = String(
-      body.serviceType ?? ""
-    ) as ServiceType;
+    const fullName =
+      readText(
+        customer.fullName
+      );
 
-    const pricingId = Number(
-      body.pricingId
-    );
+    const email =
+      readText(
+        customer.email
+      ).toLowerCase();
 
-    const travelDate = String(
-      body.travelDate ?? ""
-    ).trim();
+    const phone =
+      readText(
+        customer.phone
+      );
 
-    const passengerCount = Number(
-      body.passengerCount
-    );
+    const passportNumber =
+      readText(
+        customer.passportNumber
+      );
 
-    const luggageCount = Number(
-      body.luggageCount ?? 0
-    );
+    const serviceType =
+      readText(
+        body.serviceType
+      ) as ServiceType;
+
+    const vehicleTypeId =
+      Number(
+        body.vehicleTypeId
+      );
+
+    const travelDate =
+      readText(
+        body.travelDate
+      );
+
+    const passengerCount =
+      Number(
+        body.passengerCount
+      );
+
+    const luggageCount =
+      Number(
+        body.luggageCount ??
+          0
+      );
 
     const numberOfNights =
-      body.numberOfNights === undefined ||
-      body.numberOfNights === null ||
-      body.numberOfNights === ""
+      body.numberOfNights ===
+        undefined ||
+      body.numberOfNights ===
+        null ||
+      body.numberOfNights ===
+        ""
         ? null
-        : Number(body.numberOfNights);
+        : Number(
+            body.numberOfNights
+          );
 
-    const pickupLocation = optionalString(
-      body.pickupLocation
-    );
+    const pickupLocation =
+      readText(
+        body.pickupLocation
+      );
 
-    const dropoffLocation = optionalString(
-      body.dropoffLocation
-    );
+    const dropoffLocation =
+      readText(
+        body.dropoffLocation
+      );
 
-    const destinations = readDestinations(
-      body.destinations
-    );
+    const destinations =
+      readDestinations(
+        body.destinations
+      );
 
-    // Validate customer
-    if (!fullName || !email || !phone) {
+    /* ==========================================
+       CUSTOMER VALIDATION
+    ========================================== */
+
+    if (
+      !fullName ||
+      !email ||
+      !phone ||
+      !passportNumber
+    ) {
       return NextResponse.json(
         {
           error:
-            "Full name, email and phone number are required.",
+            "Full name, email, WhatsApp contact number, and passport number are required.",
         },
         {
           status: 400,
@@ -139,11 +191,14 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate email
     const emailPattern =
       /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!emailPattern.test(email)) {
+    if (
+      !emailPattern.test(
+        email
+      )
+    ) {
       return NextResponse.json(
         {
           error:
@@ -155,8 +210,15 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate service
-    if (!allowedServices.includes(serviceType)) {
+    /* ==========================================
+       SERVICE VALIDATION
+    ========================================== */
+
+    if (
+      !allowedServices.includes(
+        serviceType
+      )
+    ) {
       return NextResponse.json(
         {
           error:
@@ -168,29 +230,14 @@ export async function POST(request: Request) {
       );
     }
 
-    // Airport Transfer and Day Tour use a pricing route.
-    // Round Tour is handled as a reservation request, so no pricing route is required.
-    if (
-      serviceType !== "ROUND_TOUR" &&
-      (
-        !Number.isInteger(pricingId) ||
-        pricingId <= 0
-      )
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "Please select a valid pricing route.",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
+    /* ==========================================
+       VEHICLE VALIDATION
+    ========================================== */
 
-    // Validate vehicle
     if (
-      !Number.isInteger(vehicleTypeId) ||
+      !Number.isInteger(
+        vehicleTypeId
+      ) ||
       vehicleTypeId <= 0
     ) {
       return NextResponse.json(
@@ -204,11 +251,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate travel date
-    if (!travelDate) {
+    if (!validBookingDate(travelDate)) {
       return NextResponse.json(
         {
-          error: "Travel date is required.",
+          error:
+            `Select a date on or after ${earliestBookingDate()} (Sri Lanka time).`,
         },
         {
           status: 400,
@@ -216,9 +263,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate passengers
     if (
-      !Number.isInteger(passengerCount) ||
+      !Number.isInteger(
+        passengerCount
+      ) ||
       passengerCount <= 0
     ) {
       return NextResponse.json(
@@ -232,14 +280,16 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate luggage
     if (
-      !Number.isInteger(luggageCount) ||
+      !Number.isInteger(
+        luggageCount
+      ) ||
       luggageCount < 0
     ) {
       return NextResponse.json(
         {
-          error: "Luggage count is invalid.",
+          error:
+            "Luggage count is invalid.",
         },
         {
           status: 400,
@@ -247,31 +297,21 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate nights
     if (
-      numberOfNights !== null &&
-      (!Number.isInteger(numberOfNights) ||
-        numberOfNights < 0)
-    ) {
-      return NextResponse.json(
-        {
-          error: "Number of nights is invalid.",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    // Round tour must have destinations
-    if (
-      serviceType === "ROUND_TOUR" &&
-      destinations.length === 0
+      numberOfNights !==
+        null &&
+      (
+        !Number.isInteger(
+          numberOfNights
+        ) ||
+        numberOfNights <
+          0
+      )
     ) {
       return NextResponse.json(
         {
           error:
-            "Please add at least one destination for the round tour.",
+            "Number of nights is invalid.",
         },
         {
           status: 400,
@@ -279,7 +319,88 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check selected vehicle
+    if (body.returnDate && (String(body.returnDate) < travelDate || !/^\d{4}-\d{2}-\d{2}$/.test(String(body.returnDate)))) {
+      return NextResponse.json({ error: "Return date must be on or after travel date." }, { status: 400 });
+    }
+
+    if (!/^\+[1-9]\d{7,14}$/.test(phone.replace(/[\s().-]/g, "")) || !/^[A-Z0-9]{5,20}$/i.test(passportNumber)) {
+      return NextResponse.json({ error: "Enter a valid international phone number and passport number." }, { status: 400 });
+    }
+
+    if (body.reservationOnly === true) {
+      const threeDays = new Date(`${earliestBookingDate()}T00:00:00Z`);
+      threeDays.setUTCDate(threeDays.getUTCDate() + 1);
+      if (travelDate <= threeDays.toISOString().slice(0, 10)) {
+        return NextResponse.json({ error: "Reservations require a travel date at least four days ahead. For closer dates, contact the travel office." }, { status: 400 });
+      }
+    }
+
+    /* ==========================================
+       LOCATION VALIDATION
+    ========================================== */
+
+    if (!pickupLocation) {
+      return NextResponse.json(
+        {
+          error:
+            "Pickup location is required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (!dropoffLocation) {
+      return NextResponse.json(
+        {
+          error:
+            "Drop location is required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (
+      serviceType ===
+        "DAY_TOUR" &&
+      destinations.length <
+        1
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "The Day Tour destination is required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (
+      serviceType ===
+        "ROUND_TOUR" &&
+      destinations.length <
+        1
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "At least one Round Tour destination is required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    /* ==========================================
+       GET REAL VEHICLE
+    ========================================== */
+
     const vehicle =
       await db.orm.public.VehicleType
         .where({
@@ -289,7 +410,8 @@ export async function POST(request: Request) {
 
     if (
       !vehicle ||
-      vehicle.status !== "ACTIVE"
+      vehicle.status !==
+        "ACTIVE"
     ) {
       return NextResponse.json(
         {
@@ -302,13 +424,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check passenger capacity
+    /* ==========================================
+       CAPACITY VALIDATION
+    ========================================== */
+
     if (
-      passengerCount > vehicle.passengerCapacity
+      passengerCount >
+      vehicle.passengerCapacity
     ) {
       return NextResponse.json(
         {
-          error: `This vehicle allows maximum ${vehicle.passengerCapacity} passengers.`,
+          error: `${vehicle.name} allows a maximum of ${vehicle.passengerCapacity} passengers.`,
         },
         {
           status: 400,
@@ -316,13 +442,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check luggage capacity
     if (
-      luggageCount > vehicle.luggageCapacity
+      luggageCount >
+      vehicle.luggageCapacity
     ) {
       return NextResponse.json(
         {
-          error: `This vehicle allows maximum ${vehicle.luggageCapacity} luggage items.`,
+          error: `${vehicle.name} allows a maximum of ${vehicle.luggageCapacity} luggage items.`,
         },
         {
           status: 400,
@@ -330,228 +456,341 @@ export async function POST(request: Request) {
       );
     }
 
-    // Airport Transfer and Day Tour use automatic server-side pricing.
-    // Round Tour is currently saved as a reservation request with price pending.
+    /* ==========================================
+       VEHICLE RATE FROM DATABASE
+    ========================================== */
+
+    const vehicleRatePerKm =
+      Number(
+        vehicle.ratePerKm
+      );
+
+    if (
+      !Number.isFinite(
+        vehicleRatePerKm
+      ) ||
+      vehicleRatePerKm <= 0
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "A valid rate per kilometre has not been configured for the selected vehicle.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    /* ==========================================
+       SERVER-SIDE PRICE CALCULATION
+
+       Never trust browser totalAmount.
+    ========================================== */
+
     const calculatedPrice =
-      serviceType === "ROUND_TOUR"
-        ? null
-        : await calculateBookingPrice({
-            serviceType:
-              serviceType as BookingPricingServiceType,
-            pricingId,
-            pickupLocation,
-            dropoffLocation,
-            waypoints:
-              serviceType === "DAY_TOUR"
-                ? destinations
-                : [],
-          });
+      await calculateBookingPrice({
+        serviceType,
+
+        pickupLocation,
+
+        dropoffLocation,
+
+        waypoints:
+          serviceType ===
+          "AIRPORT_TRANSFER"
+            ? []
+            : destinations,
+
+        vehicleRatePerKm,
+      });
 
     const totalAmount =
-      calculatedPrice?.totalAmount ?? 0;
+      calculatedPrice.totalAmount;
 
     const currency =
-      calculatedPrice?.currency ?? "LKR";
+      calculatedPrice.currency;
 
     const bookingReference =
       createBookingReference();
 
-    const result = await db.transaction(
-      async (tx) => {
-        // Find existing customer
-        const existingCustomer =
-          await tx.orm.public.Customer
-            .where({
-              email,
-            })
-            .first();
+    /* ==========================================
+       SAVE CUSTOMER + BOOKING
+    ========================================== */
 
-        let customerId: number;
-
-        // Existing customer
-        if (existingCustomer) {
-          const updatedCustomer =
+    const result =
+      await db.transaction(
+        async (tx) => {
+          const existingCustomer =
             await tx.orm.public.Customer
               .where({
-                id: existingCustomer.id,
+                email,
               })
-              .update({
-                fullName,
-                phone,
+              .first();
 
-                passportNumber: optionalText(
-                  customer.passportNumber
-                ),
+          let customerId:
+            number;
 
-                nationality: optionalText(
-                  customer.nationality
-                ),
-
-                address: optionalText(
-                  customer.address
-                ),
-
-                specialRequirements:
-                  optionalText(
-                    customer.specialRequirements
-                  ),
-              });
-
-          if (!updatedCustomer) {
-            throw new Error(
-              "Unable to update customer."
-            );
-          }
-
-          customerId = updatedCustomer.id;
-        } else {
-          // New customer
-          const newCustomer =
-            await tx.orm.public.Customer.create({
-              fullName,
-              email,
-              phone,
-
-              passportNumber: optionalText(
-                customer.passportNumber
-              ),
-
-              nationality: optionalText(
-                customer.nationality
-              ),
-
-              address: optionalText(
-                customer.address
-              ),
-
-              specialRequirements: optionalText(
-                customer.specialRequirements
-              ),
-            });
-
-          if (!newCustomer) {
-            throw new Error(
-              "Unable to create customer."
-            );
-          }
-
-          customerId = newCustomer.id;
-        }
-
-        // Create booking
-        const booking =
-          await tx.orm.public.Booking.create({
-            bookingReference,
-
-            customerId,
-
-            vehicleTypeId,
-
-            serviceType,
-
-            travelDate,
-
-            returnDate: optionalText(
-              body.returnDate
-            ),
-
-            passengerCount,
-
-            luggageCount,
-
-            numberOfNights,
-
-            pickupLocation: optionalText(
-              body.pickupLocation
-            ),
-
-            dropoffLocation: optionalText(
-              body.dropoffLocation
-            ),
-
-            flightNumber: optionalText(
-              body.flightNumber
-            ),
-
-            specialRequests: optionalText(
-              body.specialRequests
-            ),
-
-            totalAmount: totalAmount.toFixed(2),
-
-            currency,
-
-            status: "PENDING",
-
-            paymentStatus: "UNPAID",
-          });
-
-        if (!booking) {
-          throw new Error(
-            "Unable to create booking."
-          );
-        }
-
-        // Save Round Tour destinations
-        if (serviceType === "ROUND_TOUR") {
-          for (
-            let index = 0;
-            index < destinations.length;
-            index += 1
+          if (
+            existingCustomer
           ) {
-            await tx.orm.public.BookingDestination.create(
+            const updatedCustomer =
+              await tx.orm.public.Customer
+                .where({
+                  id:
+                    existingCustomer.id,
+                })
+                .update({
+                  fullName,
+
+                  phone,
+
+                  passportNumber,
+
+                  nationality:
+                    optionalText(
+                      customer.nationality
+                    ),
+
+                  address:
+                    optionalText(
+                      customer.address
+                    ),
+
+                  specialRequirements:
+                    optionalText(
+                      customer.specialRequirements
+                    ),
+                });
+
+            if (
+              !updatedCustomer
+            ) {
+              throw new Error(
+                "Unable to update customer."
+              );
+            }
+
+            customerId =
+              updatedCustomer.id;
+          } else {
+            const newCustomer =
+              await tx.orm.public.Customer.create(
+                {
+                  fullName,
+
+                  email,
+
+                  phone,
+
+                  passportNumber,
+
+                  nationality:
+                    optionalText(
+                      customer.nationality
+                    ),
+
+                  address:
+                    optionalText(
+                      customer.address
+                    ),
+
+                  specialRequirements:
+                    optionalText(
+                      customer.specialRequirements
+                    ),
+                }
+              );
+
+            if (!newCustomer) {
+              throw new Error(
+                "Unable to create customer."
+              );
+            }
+
+            customerId =
+              newCustomer.id;
+          }
+
+          /* =====================================
+             CREATE BOOKING
+          ===================================== */
+
+          const booking =
+            await tx.orm.public.Booking.create(
               {
-                bookingId: booking.id,
+                bookingReference,
 
-                nightNumber: index + 1,
+                customerId,
 
-                destination: destinations[index],
+                vehicleTypeId,
+
+                serviceType,
+
+                travelDate,
+
+                returnDate:
+                  optionalText(
+                    body.returnDate
+                  ),
+
+                passengerCount,
+
+                luggageCount,
+
+                numberOfNights,
+
+                pickupLocation,
+
+                dropoffLocation,
+
+                flightNumber:
+                  optionalText(
+                    body.flightNumber
+                  ),
+
+                specialRequests:
+                  optionalText(
+                    body.specialRequests
+                  ),
+
+                totalAmount:
+                  totalAmount.toFixed(
+                    2
+                  ),
+
+                currency,
+
+                status:
+                  "PENDING",
+
+                paymentStatus:
+                  "UNPAID",
               }
             );
+
+          if (!booking) {
+            throw new Error(
+              "Unable to create booking."
+            );
           }
+
+          /*
+           * Store destinations.
+           *
+           * Day Tour:
+           * row 1 = main destination
+           *
+           * Round Tour:
+           * row 1, 2, 3... =
+           * destination sequence
+           */
+          if (
+            serviceType ===
+              "DAY_TOUR" ||
+            serviceType ===
+              "ROUND_TOUR"
+          ) {
+            for (
+              let index = 0;
+              index <
+              destinations.length;
+              index += 1
+            ) {
+              await tx.orm.public.BookingDestination.create(
+                {
+                  bookingId:
+                    booking.id,
+
+                  nightNumber:
+                    index + 1,
+
+                  destination:
+                    destinations[
+                      index
+                    ],
+                }
+              );
+            }
+          }
+
+          return {
+            booking,
+            customerId,
+          };
         }
+      );
 
-        return {
-          booking,
-          customerId,
-        };
+    let emailSent = false;
+    if (body.reservationOnly === true) {
+      try {
+        const baseUrl = process.env.APP_BASE_URL;
+        if (!baseUrl || !/^https:\/\//.test(baseUrl)) throw new Error("APP_BASE_URL is not configured.");
+        const token = paymentLinkToken(result.booking.id, email);
+        const paymentLink = `${baseUrl}/customer/booking/payment?booking=${result.booking.id}&token=${encodeURIComponent(token)}`;
+        await sendBookingEmail({
+          to: email, name: fullName, reference: bookingReference, service: serviceType,
+          travelDate, vehicle: vehicle.name, pickup: pickupLocation, dropoff: dropoffLocation,
+          amount: totalAmount, currency, paymentLink,
+        });
+        emailSent = true;
+      } catch (emailError) {
+        console.error("RESERVATION EMAIL ERROR:", emailError);
       }
-    );
+    }
 
-    // Successful booking response
+    /* ==========================================
+       RESPONSE
+    ========================================== */
+
     return NextResponse.json(
       {
-        message:
-          "Booking created successfully.",
+        message: emailSent ? "Reservation created and email sent." : "Booking created; email delivery could not be confirmed.",
+
+        emailSent,
 
         booking: {
-          id: result.booking.id,
+          id:
+            result.booking.id,
 
           bookingReference:
-            result.booking.bookingReference,
+            result.booking
+              .bookingReference,
 
           serviceType:
-            result.booking.serviceType,
+            result.booking
+              .serviceType,
 
-          status: result.booking.status,
+          status:
+            result.booking
+              .status,
 
           paymentStatus:
-            result.booking.paymentStatus,
+            result.booking
+              .paymentStatus,
 
-          customerId: result.customerId,
+          customerId:
+            result.customerId,
 
           vehicleTypeId:
-            result.booking.vehicleTypeId,
+            result.booking
+              .vehicleTypeId,
 
           totalAmount,
 
           currency,
 
           actualKilometres:
-            calculatedPrice?.route.actualKilometres ?? null,
+            calculatedPrice.route
+              .actualKilometres,
+
+          billableKilometres:
+            calculatedPrice.route
+              .billableKilometres,
 
           routeDurationMinutes:
-            calculatedPrice?.route.durationMinutes ?? null,
+            calculatedPrice.route
+              .durationMinutes,
         },
       },
       {
@@ -569,21 +808,12 @@ export async function POST(request: Request) {
         ? error.message
         : "Unable to create the booking.";
 
-    const status = message.includes(
-      "OPENROUTESERVICE_API_KEY"
-    )
-      ? 500
-      : message.includes("Unable to create") ||
-          message.includes("Unable to update")
-        ? 500
-        : 400;
-
     return NextResponse.json(
       {
         error: message,
       },
       {
-        status,
+        status: 400,
       }
     );
   }

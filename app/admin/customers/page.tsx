@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import AdminPageLayout from "@/components/admin/AdminPageLayout";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
@@ -9,6 +9,7 @@ import AdminTable from "@/components/admin/AdminTable";
 
 type Customer = {
   id: number;
+  isNew?: boolean;
   name: string;
   passport: string;
   nationality: string;
@@ -16,40 +17,6 @@ type Customer = {
   contact: string;
 };
 
-const initialCustomers: Customer[] = [
-  {
-    id: 1,
-    name: "Kasun Jayasena",
-    passport: "N1234567",
-    nationality: "Sri Lankan",
-    email: "kasun@email.com",
-    contact: "+94 77 123 4567",
-  },
-  {
-    id: 2,
-    name: "Emma Miller",
-    passport: "UK908122",
-    nationality: "British",
-    email: "emma@email.com",
-    contact: "+44 7700 900123",
-  },
-  {
-    id: 3,
-    name: "Robert Thomas",
-    passport: "US667892",
-    nationality: "American",
-    email: "robert@email.com",
-    contact: "+1 202 555 0182",
-  },
-  {
-    id: 4,
-    name: "Kelly Watson",
-    passport: "AU448912",
-    nationality: "Australian",
-    email: "kelly@email.com",
-    contact: "+61 412 345 678",
-  },
-];
 
 const inputClasses = `
   h-9
@@ -73,7 +40,15 @@ const inputClasses = `
 
 export default function AdminCustomersPage() {
   const [customers, setCustomers] =
-    useState<Customer[]>(initialCustomers);
+    useState<Customer[]>([]);
+  async function reload() {
+    const response = await fetch("/api/admin/customers", { cache: "no-store" });
+    if (!response.ok) { window.alert("Unable to load customers."); return; }
+    const data = await response.json();
+    setCustomers(data.customers ?? []);
+  }
+  useEffect(() => { void reload(); }, []);
+
 
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -112,26 +87,24 @@ export default function AdminCustomersPage() {
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!editingCustomer) return;
 
     if (
       !editingCustomer.name.trim() ||
-      !editingCustomer.passport.trim() ||
-      !editingCustomer.nationality.trim() ||
       !editingCustomer.email.trim() ||
       !editingCustomer.contact.trim()
     ) {
       return;
     }
 
-    setCustomers((currentCustomers) =>
-      currentCustomers.map((customer) =>
-        customer.id === editingId
-          ? editingCustomer
-          : customer,
-      ),
-    );
+    const response = await fetch(`/api/admin/customers${editingCustomer.isNew ? "" : `/` + editingId}`, {
+      method: !editingCustomer.isNew ? "PATCH" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(editingCustomer),
+    });
+    if (!response.ok) { window.alert((await response.json()).error || "Save failed."); return; }
+    await reload();
 
     setEditingId(null);
     setEditingCustomer(null);
@@ -142,12 +115,10 @@ export default function AdminCustomersPage() {
     setEditingCustomer(null);
   };
 
-  const handleDelete = (id: number) => {
-    setCustomers((currentCustomers) =>
-      currentCustomers.filter(
-        (customer) => customer.id !== id,
-      ),
-    );
+  const handleDelete = async (id: number) => {
+    const response = await fetch(`/api/admin/customers/${id}`, { method: "DELETE" });
+    if (!response.ok) { window.alert((await response.json()).error || "Delete failed."); return; }
+    await reload();
 
     if (editingId === id) {
       setEditingId(null);
@@ -165,6 +136,7 @@ export default function AdminCustomersPage() {
 
     const newCustomer: Customer = {
       id: newId,
+      isNew: true,
       name: "",
       passport: "",
       nationality: "",

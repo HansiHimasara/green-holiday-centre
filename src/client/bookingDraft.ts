@@ -7,7 +7,10 @@ export type BookingCustomer = {
   fullName: string;
   email: string;
   phone: string;
-  passportNumber?: string;
+
+  // Required
+  passportNumber: string;
+
   nationality?: string;
   address?: string;
   specialRequirements?: string;
@@ -15,8 +18,6 @@ export type BookingCustomer = {
 
 export type BookingDraft = {
   serviceType?: BookingServiceType;
-
-  pricingId?: number;
 
   vehicleTypeId?: number;
   vehicleName?: string;
@@ -26,25 +27,61 @@ export type BookingDraft = {
 
   passengerCount?: number;
   luggageCount?: number;
+
+  // Round Tour only
   numberOfNights?: number;
 
+  /*
+   * Keep FULL Photon location strings here.
+   *
+   * Example:
+   * Sigiriya, Matale District,
+   * Central Province, Sri Lanka
+   *
+   * Backend uses these for accurate
+   * route calculations.
+   */
   pickupLocation?: string;
   dropoffLocation?: string;
+
   flightNumber?: string;
 
   specialRequests?: string;
 
+  /*
+   * Airport Transfer:
+   * []
+   *
+   * Day Tour:
+   * [mainDestination]
+   *
+   * Round Tour:
+   * [night1, night2, night3, ...]
+   */
   destinations?: string[];
 
   customer?: BookingCustomer;
 
+  /*
+   * Calculated by backend.
+   */
   actualKilometres?: number;
+
   routeDurationMinutes?: number;
 
+  /*
+   * Calculated by backend.
+   */
   totalAmount?: number;
+
   currency?: string;
 
+  /*
+   * Added after /api/bookings
+   * creates the booking.
+   */
   bookingId?: number;
+
   bookingReference?: string;
 };
 
@@ -72,7 +109,12 @@ export function getBookingDraft(): BookingDraft {
     return JSON.parse(
       stored
     ) as BookingDraft;
-  } catch {
+  } catch (error) {
+    console.error(
+      "Unable to read booking draft:",
+      error
+    );
+
     return {};
   }
 }
@@ -87,18 +129,25 @@ export function saveBookingDraft(
     return;
   }
 
-  const current =
-    getBookingDraft();
+  try {
+    const current =
+      getBookingDraft();
 
-  const updated: BookingDraft = {
-    ...current,
-    ...updates,
-  };
+    const updated: BookingDraft = {
+      ...current,
+      ...updates,
+    };
 
-  window.sessionStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify(updated)
-  );
+    window.sessionStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(updated)
+    );
+  } catch (error) {
+    console.error(
+      "Unable to save booking draft:",
+      error
+    );
+  }
 }
 
 export function clearBookingDraft() {
@@ -109,7 +158,14 @@ export function clearBookingDraft() {
     return;
   }
 
-  window.sessionStorage.removeItem(
-    STORAGE_KEY
-  );
+  try {
+    window.sessionStorage.removeItem(
+      STORAGE_KEY
+    );
+  } catch (error) {
+    console.error(
+      "Unable to clear booking draft:",
+      error
+    );
+  }
 }

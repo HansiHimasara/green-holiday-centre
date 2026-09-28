@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import AdminPageLayout from "@/components/admin/AdminPageLayout";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
@@ -19,55 +19,11 @@ type Vehicle = {
   fuelType: string;
   description: string;
   rate: string;
+  imageUrl?: string;
+  dbId?: number;
   status: VehicleStatus;
 };
 
-const initialVehicles: Vehicle[] = [
-  {
-    id: "VH-001",
-    model: "Mercedes Benz",
-    passengers: 4,
-    luggage: 2,
-    transmission: "Automatic",
-    fuelType: "Hybrid",
-    description: "Premium luxury sedan",
-    rate: "Rs. 180/km",
-    status: "active",
-  },
-  {
-    id: "VH-002",
-    model: "Suzuki Wagon R",
-    passengers: 4,
-    luggage: 2,
-    transmission: "Automatic",
-    fuelType: "Petrol",
-    description: "Ideal economy city vehicle",
-    rate: "Rs. 100/km",
-    status: "active",
-  },
-  {
-    id: "VH-003",
-    model: "Toyota Hiace",
-    passengers: 14,
-    luggage: 10,
-    transmission: "Automatic",
-    fuelType: "Diesel",
-    description: "Comfortable vehicle for groups",
-    rate: "Rs. 220/km",
-    status: "active",
-  },
-  {
-    id: "VH-004",
-    model: "Mitsubishi Montero",
-    passengers: 6,
-    luggage: 4,
-    transmission: "Automatic",
-    fuelType: "Diesel",
-    description: "Premium SUV",
-    rate: "Rs. 250/km",
-    status: "inactive",
-  },
-];
 
 const transmissionOptions = [
   "Automatic",
@@ -132,7 +88,15 @@ const selectClasses = `
 
 export default function AdminVehiclesPage() {
   const [vehicles, setVehicles] =
-    useState<Vehicle[]>(initialVehicles);
+    useState<Vehicle[]>([]);
+  async function reload() {
+    const response = await fetch("/api/admin/vehicles", { cache: "no-store" });
+    if (!response.ok) { window.alert("Unable to load vehicles."); return; }
+    const data = await response.json();
+    setVehicles(data.vehicles ?? []);
+  }
+  useEffect(() => { void reload(); }, []);
+
 
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -193,7 +157,7 @@ export default function AdminVehiclesPage() {
      SAVE VEHICLE
   ========================================== */
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!editingVehicle) return;
 
     if (
@@ -209,13 +173,13 @@ export default function AdminVehiclesPage() {
       return;
     }
 
-    setVehicles((currentVehicles) =>
-      currentVehicles.map((vehicle) =>
-        vehicle.id === editingId
-          ? editingVehicle
-          : vehicle,
-      ),
-    );
+    const response = await fetch(`/api/admin/vehicles${editingVehicle.dbId ? `/` + editingVehicle.dbId : ""}`, {
+      method: editingId && editingVehicle.dbId ? "PATCH" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(editingVehicle),
+    });
+    if (!response.ok) { window.alert((await response.json()).error || "Save failed."); return; }
+    await reload();
 
     setEditingId(null);
     setEditingVehicle(null);
@@ -234,12 +198,10 @@ export default function AdminVehiclesPage() {
      DELETE VEHICLE
   ========================================== */
 
-  const handleDelete = (id: string) => {
-    setVehicles((currentVehicles) =>
-      currentVehicles.filter(
-        (vehicle) => vehicle.id !== id,
-      ),
-    );
+  const handleDelete = async (id: string) => {
+    const response = await fetch(`/api/admin/vehicles/${Number(id.replace("VH-", ""))}`, { method: "DELETE" });
+    if (!response.ok) { window.alert((await response.json()).error || "Delete failed."); return; }
+    await reload();
 
     if (editingId === id) {
       setEditingId(null);
@@ -264,6 +226,7 @@ export default function AdminVehiclesPage() {
       fuelType: "Hybrid",
       description: "",
       rate: "",
+      imageUrl: "",
       status: "active",
     };
 
@@ -647,7 +610,7 @@ export default function AdminVehiclesPage() {
                       <td className="px-5 py-4">
                         {isEditing &&
                         editingVehicle ? (
-                          <input
+                          <div className="space-y-2"><input
                             type="text"
                             value={
                               editingVehicle.description
@@ -660,7 +623,7 @@ export default function AdminVehiclesPage() {
                             }
                             placeholder="Description"
                             className={`${inputClasses} min-w-[190px]`}
-                          />
+                          /><input type="url" aria-label="Vehicle photo URL" placeholder="HTTPS photo URL" value={editingVehicle.imageUrl ?? ""} onChange={(event) => updateEditingField("imageUrl", event.target.value)} className={`${inputClasses} min-w-[190px]`} /></div>
                         ) : (
                           <span className="text-[12px] text-[var(--text-secondary)]">
                             {vehicle.description ||

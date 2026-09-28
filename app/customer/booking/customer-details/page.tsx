@@ -59,8 +59,10 @@ export default function CustomerDetailsPage() {
       "AIRPORT_TRANSFER"
     );
 
-  // Load previously entered customer details
-  // and current booking service
+  /* =======================================================
+     LOAD SAVED CUSTOMER DETAILS
+  ======================================================= */
+
   useEffect(() => {
     const draft =
       getBookingDraft();
@@ -101,7 +103,10 @@ export default function CustomerDetailsPage() {
     );
   }, []);
 
-  // Decide which service tab should be active
+  /* =======================================================
+     ACTIVE SERVICE TAB
+  ======================================================= */
+
   const serviceTab:
     | "airport-transfer"
     | "day-tour"
@@ -114,7 +119,10 @@ export default function CustomerDetailsPage() {
         ? "round-tour"
         : "airport-transfer";
 
-  // Decide where Back button should go
+  /* =======================================================
+     BACK BUTTON ROUTE
+  ======================================================= */
+
   const backHref =
     serviceType ===
     "DAY_TOUR"
@@ -124,7 +132,10 @@ export default function CustomerDetailsPage() {
         ? "/customer/booking/round-tour"
         : "/customer/booking/airport-transfer";
 
-  // Save customer details before going to summary
+  /* =======================================================
+     CONTINUE
+  ======================================================= */
+
   function handleContinue() {
     const normalizedFullName =
       fullName.trim();
@@ -137,17 +148,28 @@ export default function CustomerDetailsPage() {
     const normalizedPhone =
       phone.trim();
 
+    const normalizedPassportNumber =
+      passportNumber.trim();
+
+    /*
+     * ALL FOUR FIELDS ARE REQUIRED
+     */
     if (
       !normalizedFullName ||
       !normalizedEmail ||
-      !normalizedPhone
+      !normalizedPhone ||
+      !normalizedPassportNumber
     ) {
       window.alert(
-        "Please enter your full name, email address and WhatsApp contact number."
+        "Please enter your name, email address, WhatsApp contact number, and passport number."
       );
 
       return;
     }
+
+    /* =====================================================
+       EMAIL VALIDATION
+    ===================================================== */
 
     const emailPattern =
       /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -164,7 +186,19 @@ export default function CustomerDetailsPage() {
       return;
     }
 
-    // Make sure Step 1 was completed
+    if (!/^\+[1-9]\d{7,14}$/.test(normalizedPhone.replace(/[\s().-]/g, ""))) {
+      window.alert("Use an international phone number, for example +94771234567.");
+      return;
+    }
+    if (!/^[A-Z0-9]{5,20}$/i.test(normalizedPassportNumber)) {
+      window.alert("Enter a valid passport number (5 to 20 letters or digits).");
+      return;
+    }
+
+    /* =====================================================
+       MAKE SURE STEP 1 WAS COMPLETED
+    ===================================================== */
+
     const draft =
       getBookingDraft();
 
@@ -180,6 +214,10 @@ export default function CustomerDetailsPage() {
       return;
     }
 
+    /* =====================================================
+       SAVE CUSTOMER DETAILS
+    ===================================================== */
+
     saveBookingDraft({
       customer: {
         fullName:
@@ -192,7 +230,7 @@ export default function CustomerDetailsPage() {
           normalizedPhone,
 
         passportNumber:
-          passportNumber.trim(),
+          normalizedPassportNumber,
 
         specialRequirements:
           specialRequirements.trim(),
@@ -209,10 +247,12 @@ export default function CustomerDetailsPage() {
       {/* ==========================================
           TOP WHITE AREA
       ========================================== */}
+
       <section className="relative overflow-hidden bg-white">
         <div className="relative z-10">
 
           {/* Service Tabs */}
+
           <div className="mx-auto w-full max-w-[1280px] px-6 pt-7 md:px-10">
             <ServiceTabs
               active={serviceTab}
@@ -220,6 +260,7 @@ export default function CustomerDetailsPage() {
           </div>
 
           {/* Step Header */}
+
           <div className="mt-10 border-b border-[var(--border-light)]">
             <div className="mx-auto w-full max-w-[1280px] px-6 pb-6 md:px-10">
               <BookingStepHeader
@@ -235,6 +276,7 @@ export default function CustomerDetailsPage() {
       {/* ==========================================
           FORM AREA
       ========================================== */}
+
       <section className="relative overflow-hidden bg-[#F5F7F5] py-10">
 
         <DecorativePattern position="bottom-right" />
@@ -242,11 +284,15 @@ export default function CustomerDetailsPage() {
         <div className="relative z-10 mx-auto w-full max-w-[1280px] px-6 md:px-10">
           <div className="space-y-8">
 
-            {/* Full Name */}
+            {/* ====================================
+                FULL NAME - REQUIRED
+            ==================================== */}
+
             <Input
               label="Full Name"
               placeholder="Enter your full name"
               value={fullName}
+              required
               onChange={(event) =>
                 setFullName(
                   event.target.value
@@ -254,12 +300,16 @@ export default function CustomerDetailsPage() {
               }
             />
 
-            {/* Email */}
+            {/* ====================================
+                EMAIL - REQUIRED
+            ==================================== */}
+
             <Input
               label="Email Address"
               type="email"
               placeholder="Enter your email address"
               value={email}
+              required
               onChange={(event) =>
                 setEmail(
                   event.target.value
@@ -267,12 +317,18 @@ export default function CustomerDetailsPage() {
               }
             />
 
-            {/* WhatsApp */}
+            <p className="text-sm text-[var(--text-secondary)]">Use an email you check regularly. Your tour details, invoice and payment information will be sent there.</p>
+
+            {/* ====================================
+                WHATSAPP - REQUIRED
+            ==================================== */}
+
             <Input
               label="WhatsApp Contact Number"
               type="tel"
               placeholder="+94 77 123 4567"
               value={phone}
+              required
               onChange={(event) =>
                 setPhone(
                   event.target.value
@@ -280,11 +336,15 @@ export default function CustomerDetailsPage() {
               }
             />
 
-            {/* Passport */}
+            {/* ====================================
+                PASSPORT - REQUIRED
+            ==================================== */}
+
             <Input
               label="Passport Number"
               placeholder="Enter passport number"
               value={passportNumber}
+              required
               onChange={(event) =>
                 setPassportNumber(
                   event.target.value
@@ -292,7 +352,10 @@ export default function CustomerDetailsPage() {
               }
             />
 
-            {/* Special Requests */}
+            {/* ====================================
+                SPECIAL REQUESTS - OPTIONAL
+            ==================================== */}
+
             <Textarea
               label="Special Requests / Notes About Your Requirements"
               placeholder="Specify any special requests, medical requirements, child seat requirements, or anything else..."
@@ -306,7 +369,10 @@ export default function CustomerDetailsPage() {
               }
             />
 
-            {/* Navigation */}
+            {/* ====================================
+                NAVIGATION
+            ==================================== */}
+
             <div className="flex items-center justify-between pt-1">
 
               <Button

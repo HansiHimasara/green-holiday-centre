@@ -8,7 +8,7 @@ export async function sendPasswordResetEmail(
     process.env.SMTP_USER;
 
   const smtpPassword =
-    process.env.SMTP_APP_PASSWORD;
+    process.env.SMTP_PASS;
 
   if (
     !smtpUser ||
@@ -21,8 +21,9 @@ export async function sendPasswordResetEmail(
 
   const transporter =
     nodemailer.createTransport({
-      service: "gmail",
-
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT || 587),
+      secure: Number(process.env.SMTP_PORT) === 465,
       auth: {
         user: smtpUser,
         pass: smtpPassword,
@@ -30,7 +31,7 @@ export async function sendPasswordResetEmail(
     });
 
   await transporter.sendMail({
-    from: `"Green Holiday" <${smtpUser}>`,
+    from: process.env.SMTP_FROM || smtpUser,
 
     to: email,
 

@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import AdminPageLayout from "@/components/admin/AdminPageLayout";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import AdminTable from "@/components/admin/AdminTable";
 import AdminStatusBadge from "@/components/admin/AdminStatusBadge";
 
-type BookingStatus = "confirmed" | "pending" | "cancelled";
+type BookingStatus = "confirmed" | "pending" | "cancelled" | "completed";
 
 type Booking = {
   id: string;
@@ -18,50 +18,34 @@ type Booking = {
   status: BookingStatus;
 };
 
-const initialBookings: Booking[] = [
-  {
-    id: "GH-2026-1021",
-    customer: "Kasun Silva",
-    date: "Jun 21, 2026",
-    vehicle: "Toyota Prius",
-    status: "confirmed",
-  },
-  {
-    id: "GH-2026-1022",
-    customer: "Dinithi Perera",
-    date: "Jun 21, 2026",
-    vehicle: "Suzuki Wagon R",
-    status: "pending",
-  },
-  {
-    id: "GH-2026-1023",
-    customer: "Nimal Fernando",
-    date: "Jun 20, 2026",
-    vehicle: "Toyota Hiace",
-    status: "cancelled",
-  },
-];
 
 export default function AdminDashboardPage() {
-  const [bookings] = useState<Booking[]>(initialBookings);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [customers, setCustomers] = useState<{ createdAt: string }[]>([]);
+  useEffect(() => {
+    void (async () => {
+      const [bookingResponse, customerResponse] = await Promise.all([
+        fetch("/api/admin/bookings", { cache: "no-store" }),
+        fetch("/api/admin/customers", { cache: "no-store" }),
+      ]);
+      if (bookingResponse.ok) setBookings((await bookingResponse.json()).bookings ?? []);
+      if (customerResponse.ok) setCustomers((await customerResponse.json()).customers ?? []);
+    })();
+  }, []);
 
   const stats = useMemo(() => {
     const pendingBookings = bookings.filter(
       (booking) => booking.status === "pending",
     ).length;
 
-    const completedTrips = bookings.filter(
-      (booking) => booking.status === "confirmed",
-    ).length;
-
     return {
-      customers: 1284,
-      customersThisMonth: 12,
+      customers: customers.length,
+      customersThisMonth: customers.filter(customer => customer.createdAt?.startsWith(new Date().toISOString().slice(0, 7))).length,
       pendingBookings,
-      completedTrips: 984,
-      completedThisMonth: 18,
+      completedTrips: bookings.filter(booking => booking.status === "completed").length,
+      completedThisMonth: bookings.filter(booking => booking.status === "completed" && booking.date?.startsWith(new Date().toISOString().slice(0, 7))).length,
     };
-  }, [bookings]);
+  }, [bookings, customers]);
 
   return (
     <AdminPageLayout sectionTitle="Dashboard Overview">

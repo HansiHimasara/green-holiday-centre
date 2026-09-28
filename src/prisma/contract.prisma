@@ -181,6 +181,9 @@ model VehicleType {
   passengerCapacity   Int
   luggageCapacity     Int
 
+  // LKR charged per kilometre
+  ratePerKm           Int           @default(0)
+
   transmission        String?
   fuelType            String?
   airConditioning     Boolean       @default(true)
