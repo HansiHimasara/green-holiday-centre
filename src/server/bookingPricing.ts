@@ -263,6 +263,13 @@ async function calculateRoadRoute(
           body:
             JSON.stringify({
               coordinates,
+
+              // Places such as an airport can be mapped to the centre
+              // of the site rather than its road entrance.
+              radiuses:
+                coordinates.map(
+                  () => 1500
+                ),
             }),
 
           cache:
@@ -290,6 +297,36 @@ async function calculateRoadRoute(
       response.status,
       errorText
     );
+
+    if (response.status === 404) {
+      try {
+        const serviceError = JSON.parse(errorText) as {
+          error?: { code?: number; message?: string };
+        };
+
+        if (serviceError.error?.code === 2010) {
+          const coordinateIndex = Number(
+            serviceError.error.message?.match(
+              /coordinate\s+(\d+)/i
+            )?.[1]
+          );
+          const location = Number.isInteger(coordinateIndex)
+            ? cleanLocations[coordinateIndex]
+            : undefined;
+
+          throw new Error(
+            location
+              ? `No drivable road was found near "${location}". Please select a nearby road entrance or pickup point.`
+              : "No drivable road was found near one of the selected locations. Please select a nearby road entrance or pickup point."
+          );
+        }
+      } catch (error) {
+        if (error instanceof Error &&
+            error.message.startsWith("No drivable road")) {
+          throw error;
+        }
+      }
+    }
 
     throw new Error(
       "Unable to calculate the road distance for this route."
