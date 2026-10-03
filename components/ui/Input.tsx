@@ -19,6 +19,7 @@ export default function Input({
       )}
 
       <input
+        maxLength={props.type === "email" ? 254 : props.type === "password" ? 128 : 500}
         {...props}
         className={`h-[46px] w-full rounded-md border border-[#DDE4DE] bg-white px-4 text-[14px] text-[var(--text-primary)] outline-none transition-colors placeholder:text-[#7D8981] focus:border-[var(--green-primary)] ${className}`}
       />

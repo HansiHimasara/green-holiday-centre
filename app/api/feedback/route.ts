@@ -1,3 +1,4 @@
+import { withApi } from "@/src/server/http/guard";
 import { NextResponse } from "next/server";
 
 import { db } from "@/src/prisma/db";
@@ -6,7 +7,7 @@ import { readRating } from "@/src/server/feedback";
 export const runtime = "nodejs";
 
 /* Public: a customer submits feedback */
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const body = await request.json();
 
@@ -114,7 +115,7 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET() {
+async function handleGET() {
   try {
     const rows = await db.orm.public.Feedback.where({ visibility: "VISIBLE" }).all();
     return NextResponse.json({ feedback: rows.map(row => ({
@@ -124,3 +125,6 @@ export async function GET() {
     return NextResponse.json({ error: "Unable to load feedback." }, { status: 500 });
   }
 }
+export const POST = withApi(handlePOST, "/api/feedback");
+
+export const GET = withApi(handleGET, "/api/feedback");

@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch as fetch } from "@/src/client/apiFetch";
+
 import { useEffect, useState } from "react";
 
 import Header from "@/components/layout/Header";
@@ -12,7 +14,7 @@ import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
 import Button from "@/components/ui/Button";
 
-import DecorativePattern from "@/components/ui/DecorativePattern";
+
 
 export default function FeedbackPage() {
   const [fullName, setFullName] = useState("");
