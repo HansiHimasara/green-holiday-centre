@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch as fetch } from "@/src/client/apiFetch";
+
 import { useEffect, useState } from "react";
 import BookingPageShell from "@/components/bookings/BookingPageShell";
 import BookingStepHeader from "@/components/bookings/BookingStepHeader";
@@ -11,16 +13,18 @@ import { getBookingDraft, type BookingDraft } from "@/src/client/bookingDraft";
 
 export default function PaymentPage() {
   const [draft, setDraft] = useState<BookingDraft | null>(null);
-  const [message, setMessage] = useState("The payment gateway is being connected. Your card details are never entered on this website.");
+  const [message, setMessage] = useState("The payment gateway is being connected. No online payment is collected. Contact Green Holiday Centre to arrange payment.");
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronize browser-only draft/URL state after hydration.
     setDraft(getBookingDraft());
     const params = new URLSearchParams(window.location.search);
     if (params.get("booking") && params.get("token")) {
+      setDraft(null);
       void fetch(`/api/booking-payment?${params.toString()}`, { cache: "no-store" })
         .then(async response => { const data = await response.json(); if (!response.ok) throw new Error(data.error); return data; })
         .then(data => {
-          setDraft({ bookingId: data.booking.id, bookingReference: data.booking.bookingReference, totalAmount: data.booking.amount, currency: data.booking.currency });
-          if (data.booking.paymentStatus === "PAID") setMessage("This booking has already been paid and confirmed.");
+          setDraft({ confirmationToken: data.confirmationToken, serviceType: data.booking.serviceType, bookingId: data.booking.id, bookingReference: data.booking.bookingReference, totalAmount: data.booking.amount, currency: data.booking.currency });
+          if (data.booking.paymentStatus === "PAID") setMessage("Payment has been received for this booking.");
           if (data.booking.status === "CANCELLED") setMessage("This reservation has expired or been cancelled.");
         }).catch(error => setMessage(error instanceof Error ? error.message : "Unable to open payment link."));
     }
@@ -40,7 +44,7 @@ export default function PaymentPage() {
         </div><SecureBadge /></div></div>
         <div className="px-6 py-6 md:px-7"><p className="text-[13px] text-[var(--text-secondary)]">{message}</p>
           {typeof draft?.totalAmount === "number" && <p className="mt-4 font-serif text-[26px] font-bold text-[var(--green-dark)]">{draft.currency || "USD"} {draft.totalAmount.toFixed(2)}</p>}
-          <div className="mt-5 border-t border-[var(--border-light)] pt-4"><Button href="/customer/booking/summary" variant="outline">Back</Button></div>
+          <div className="mt-5 border-t border-[var(--border-light)] pt-4"><Button href={draft?.bookingId && draft.confirmationToken ? `/customer/booking/confirmation?booking=${draft.bookingId}&token=${encodeURIComponent(draft.confirmationToken)}` : "/customer/booking/summary"} variant="outline">{draft?.confirmationToken ? "View Reservation" : "Back"}</Button></div>
         </div>
       </div>
     </div></section>

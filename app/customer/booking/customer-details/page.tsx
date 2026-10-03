@@ -68,6 +68,7 @@ export default function CustomerDetailsPage() {
       getBookingDraft();
 
     if (draft.serviceType) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronize browser-only draft/URL state after hydration.
       setServiceType(
         draft.serviceType
       );

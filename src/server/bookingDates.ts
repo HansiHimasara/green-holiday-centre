@@ -7,7 +7,7 @@ export function earliestBookingDate(now = new Date()): string {
   const parts = Object.fromEntries(
     COLOMBO_DAY.formatToParts(now).map(({ type, value }) => [type, value])
   );
-  const date = new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day) + 2));
+  const date = new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day) + 4));
   return date.toISOString().slice(0, 10);
 }
 

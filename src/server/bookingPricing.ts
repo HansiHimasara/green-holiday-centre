@@ -1,3 +1,5 @@
+export class BookingPricingError extends Error {}
+
 export type BookingPricingServiceType =
   | "AIRPORT_TRANSFER"
   | "DAY_TOUR"
@@ -96,7 +98,7 @@ async function geocodeLocation(
     location.trim();
 
   if (!cleanLocation) {
-    throw new Error(
+    throw new BookingPricingError(
       "A route location is missing."
     );
   }
@@ -136,7 +138,7 @@ async function geocodeLocation(
       error
     );
 
-    throw new Error(
+    throw new BookingPricingError(
       `Unable to find coordinates for ${cleanLocation}.`
     );
   }
@@ -147,7 +149,7 @@ async function geocodeLocation(
       response.status
     );
 
-    throw new Error(
+    throw new BookingPricingError(
       `Unable to locate "${cleanLocation}".`
     );
   }
@@ -164,7 +166,7 @@ async function geocodeLocation(
     !coordinates ||
     coordinates.length < 2
   ) {
-    throw new Error(
+    throw new BookingPricingError(
       `Location not found: ${cleanLocation}`
     );
   }
@@ -187,7 +189,7 @@ async function geocodeLocation(
       latitude
     )
   ) {
-    throw new Error(
+    throw new BookingPricingError(
       `Invalid coordinates for ${cleanLocation}.`
     );
   }
@@ -210,7 +212,7 @@ async function calculateRoadRoute(
       .OPENROUTESERVICE_API_KEY;
 
   if (!apiKey) {
-    throw new Error(
+    throw new BookingPricingError(
       "OPENROUTESERVICE_API_KEY is missing from .env."
     );
   }
@@ -227,7 +229,7 @@ async function calculateRoadRoute(
     cleanLocations.length <
     2
   ) {
-    throw new Error(
+    throw new BookingPricingError(
       "At least two locations are required."
     );
   }
@@ -283,7 +285,7 @@ async function calculateRoadRoute(
       error
     );
 
-    throw new Error(
+    throw new BookingPricingError(
       "The route service took too long to respond. Please try again."
     );
   }
@@ -314,7 +316,7 @@ async function calculateRoadRoute(
             ? cleanLocations[coordinateIndex]
             : undefined;
 
-          throw new Error(
+          throw new BookingPricingError(
             location
               ? `No drivable road was found near "${location}". Please select a nearby road entrance or pickup point.`
               : "No drivable road was found near one of the selected locations. Please select a nearby road entrance or pickup point."
@@ -328,7 +330,7 @@ async function calculateRoadRoute(
       }
     }
 
-    throw new Error(
+    throw new BookingPricingError(
       "Unable to calculate the road distance for this route."
     );
   }
@@ -357,7 +359,7 @@ async function calculateRoadRoute(
     ) ||
     distanceMetres <= 0
   ) {
-    throw new Error(
+    throw new BookingPricingError(
       "A valid road distance could not be calculated."
     );
   }
@@ -412,7 +414,7 @@ export async function calculateBookingPrice({
   if (
     !pickupLocation.trim()
   ) {
-    throw new Error(
+    throw new BookingPricingError(
       "Pickup location is required."
     );
   }
@@ -420,7 +422,7 @@ export async function calculateBookingPrice({
   if (
     !dropoffLocation.trim()
   ) {
-    throw new Error(
+    throw new BookingPricingError(
       "Drop location is required."
     );
   }
@@ -431,7 +433,7 @@ export async function calculateBookingPrice({
     ) ||
     vehicleRatePerKm <= 0
   ) {
-    throw new Error(
+    throw new BookingPricingError(
       "The selected vehicle does not have a valid rate per kilometre."
     );
   }
@@ -463,7 +465,7 @@ export async function calculateBookingPrice({
       cleanWaypoints.length <
       1
     ) {
-      throw new Error(
+      throw new BookingPricingError(
         "Day Tour destination is required."
       );
     }
@@ -478,7 +480,7 @@ export async function calculateBookingPrice({
       cleanWaypoints.length <
       1
     ) {
-      throw new Error(
+      throw new BookingPricingError(
         "At least one Round Tour destination is required."
       );
     }
@@ -490,12 +492,6 @@ export async function calculateBookingPrice({
     ];
   }
 
-  const route =
-    await calculateRoadRoute(
-      routeLocations
-    );
-
-  const billableKilometres = route.actualKilometres + 20;
   const markupNames: Record<BookingPricingServiceType, string> = {
     AIRPORT_TRANSFER: "AIRPORT_TRANSFER_MARKUP_LKR",
     DAY_TOUR: "DAY_TOUR_MARKUP_LKR",
@@ -505,10 +501,20 @@ export async function calculateBookingPrice({
   const lkrPerUsd = Number(process.env.LKR_PER_USD);
   if (!process.env[markupNames[serviceType]] || !Number.isFinite(markup) || markup < 0 ||
       !process.env.LKR_PER_USD || !Number.isFinite(lkrPerUsd) || lkrPerUsd <= 0) {
-    throw new Error("Pricing settings are missing. Contact the travel office.");
+    throw new BookingPricingError("Pricing settings are missing. Contact the travel office.");
   }
+
+  const route =
+    await calculateRoadRoute(
+      routeLocations
+    );
+
+  const billableKilometres = route.actualKilometres + 20;
   const totalAmount = Math.ceil(((billableKilometres * vehicleRatePerKm + markup) / lkrPerUsd) * 100) / 100;
 
+  if (!Number.isFinite(totalAmount) || totalAmount <= 0 || totalAmount > 99999999.99) {
+    throw new BookingPricingError("The calculated price is outside the supported range. Contact the travel office.");
+  }
   return {
     totalAmount,
 

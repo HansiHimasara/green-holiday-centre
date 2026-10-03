@@ -21,13 +21,14 @@ export async function sendBookingEmail(details: BookingEmail, confirmed = false)
   }
   const transporter = nodemailer.createTransport({
     host: SMTP_HOST,
+    connectionTimeout: 5000, greetingTimeout: 5000, socketTimeout: 10000,
     port: Number(SMTP_PORT),
     secure: Number(SMTP_PORT) === 465,
     auth: { user: SMTP_USER, pass: SMTP_PASS },
   });
   const lines = [
     `Hello ${details.name},`,
-    confirmed ? "Your payment has been verified and your booking is confirmed." : "Your booking is reserved pending payment.",
+    confirmed ? "Your payment has been verified and your booking is confirmed." : "Your reservation request has been received. Payment is UNPAID. Online payment is not available yet; contact Green Holiday Centre to arrange payment.",
     `Booking: ${details.reference}`,
     `Service: ${details.service}`,
     `Travel date: ${details.travelDate}`,
@@ -35,7 +36,7 @@ export async function sendBookingEmail(details: BookingEmail, confirmed = false)
     `Pickup: ${details.pickup}`,
     `Dropoff: ${details.dropoff}`,
     `Total: ${details.currency} ${details.amount.toFixed(2)}`,
-    ...(!confirmed && details.paymentLink ? [`Pay to confirm: ${details.paymentLink}`] : []),
+    ...(!confirmed && details.paymentLink ? [`View your reservation: ${details.paymentLink}`] : []),
     "Green Holiday Centre",
   ];
   await transporter.sendMail({

@@ -1,13 +1,14 @@
+import { withApi } from "@/src/server/http/guard";
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { db } from "@/src/prisma/db";
 
 export const runtime = "nodejs";
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const key = process.env.CRON_SECRET;
   const supplied = request.headers.get("authorization")?.replace(/^Bearer /, "") || "";
-  if (!key || supplied.length !== key.length || !timingSafeEqual(Buffer.from(key), Buffer.from(supplied))) {
+  if (!key || Buffer.byteLength(supplied) !== Buffer.byteLength(key) || !timingSafeEqual(Buffer.from(key), Buffer.from(supplied))) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
   // Calendar dates are evaluated in Sri Lanka, independently of the server time zone.
@@ -25,3 +26,4 @@ export async function POST(request: Request) {
   }
   return NextResponse.json({ cancelled });
 }
+export const POST = withApi(handlePOST, "/api/cron/cancel-unpaid");

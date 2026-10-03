@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch as fetch } from "@/src/client/apiFetch";
+
 import {
   useEffect,
   useState,
@@ -148,17 +150,16 @@ export default function BookingSummaryPage() {
     const savedDraft =
       getBookingDraft();
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronize browser-only draft/URL state after hydration.
     setDraft(
       savedDraft
     );
   }, []);
 
-  useEffect(() => {
-    if (!draft) {
-      return;
-    }
+  const { serviceType, vehicleTypeId, pickupLocation, dropoffLocation, destinations } = draft || {};
 
-    if (!draft.serviceType) {
+  useEffect(() => {
+    if (!serviceType) {
       return;
     }
 
@@ -171,7 +172,7 @@ export default function BookingSummaryPage() {
         );
         setQuoteError("");
 
-        const waypoints = draft.serviceType === "AIRPORT_TRANSFER" ? [] : draft.destinations ?? [];
+        const waypoints = serviceType === "AIRPORT_TRANSFER" ? [] : destinations ?? [];
 
         const response =
           await fetch(
@@ -186,13 +187,13 @@ export default function BookingSummaryPage() {
                 JSON.stringify(
                   {
                     serviceType:
-                      draft.serviceType,
+                      serviceType,
                     vehicleTypeId:
-                      draft.vehicleTypeId,
+                      vehicleTypeId,
                     pickupLocation:
-                      draft.pickupLocation,
+                      pickupLocation,
                     dropoffLocation:
-                      draft.dropoffLocation,
+                      dropoffLocation,
                     waypoints,
                   }
                 ),
@@ -253,10 +254,7 @@ export default function BookingSummaryPage() {
               : currentDraft
         );
       } catch (error) {
-        console.error(
-          "Load booking quote error:",
-          error
-        );
+        // Expected validation failures are displayed inline below.
 
         if (!cancelled) {
           setQuoteError(
@@ -280,11 +278,11 @@ export default function BookingSummaryPage() {
       cancelled = true;
     };
   }, [
-    draft?.serviceType,
-    draft?.vehicleTypeId,
-    draft?.pickupLocation,
-    draft?.dropoffLocation,
-    draft?.destinations,
+    serviceType,
+    vehicleTypeId,
+    pickupLocation,
+    dropoffLocation,
+    destinations,
   ]);
 
   if (!draft) {
@@ -464,6 +462,7 @@ export default function BookingSummaryPage() {
       | "reservation"
       | "payment"
   ) {
+    if (submitting || quoteLoading || quoteError) return;
     const currentDraft =
       draft;
 
@@ -480,11 +479,6 @@ export default function BookingSummaryPage() {
         "Please confirm that your booking details are correct."
       );
 
-      return;
-    }
-
-    if (String(nextPage) === "payment") {
-      window.alert("Secure online payment is awaiting Green Holiday Travels' gateway connection. You can reserve the vehicle now and receive your booking details by email.");
       return;
     }
 
@@ -537,10 +531,13 @@ export default function BookingSummaryPage() {
       currentDraft.customer;
 
     if (currentDraft.bookingId && currentDraft.bookingReference) {
-      window.alert(`Your reservation ${currentDraft.bookingReference} has already been created.`);
+      router.push(currentDraft.confirmationToken ? `/customer/booking/confirmation?booking=${currentDraft.bookingId}&token=${encodeURIComponent(currentDraft.confirmationToken)}` : "/customer/booking/confirmation");
       return;
     }
 
+    const requestId = currentDraft.requestId || crypto.randomUUID();
+    saveBookingDraft({ requestId });
+    setDraft({ ...currentDraft, requestId });
     try {
       setSubmitting(
         true
@@ -604,6 +601,7 @@ export default function BookingSummaryPage() {
                   currency:
                     bookingCurrency,
 
+                  requestId,
                   reservationOnly: nextPage !== "payment",
                   customer: {
                     fullName:
@@ -645,10 +643,6 @@ export default function BookingSummaryPage() {
       }
 
       setEmailDelivered(Boolean(data.emailSent));
-      if (nextPage !== "payment") {
-        window.alert(data.emailSent ? "Reservation created. We sent your tour details and payment link by email." : "Reservation created, but email delivery could not be confirmed. Please contact the travel office with your booking reference.");
-      }
-
       if (!data.booking) {
         window.alert(
           "Booking could not be created."
@@ -669,6 +663,8 @@ export default function BookingSummaryPage() {
         bookingCurrency;
 
       saveBookingDraft({
+        confirmationToken: data.confirmationToken,
+        emailSent: Boolean(data.emailSent),
         bookingId:
           data.booking.id,
 
@@ -685,7 +681,7 @@ export default function BookingSummaryPage() {
 
       setDraft({
         ...currentDraft,
-
+        requestId,
         bookingId:
           data.booking.id,
 
@@ -700,16 +696,7 @@ export default function BookingSummaryPage() {
           savedCurrency,
       });
 
-      if (
-        nextPage ===
-        "payment"
-      ) {
-        router.push(
-          "/customer/booking/payment"
-        );
-      } else {
-        // The summary remains visible with the saved reference and email status.
-      }
+      router.push(`/customer/booking/confirmation?booking=${data.booking.id}&token=${encodeURIComponent(data.confirmationToken)}`);
     } catch (error) {
       console.error(
         "Booking submission error:",
@@ -955,11 +942,11 @@ export default function BookingSummaryPage() {
                 <span>
                   {isRoundTour
                     ? "I confirm that the details above are correct and I agree to submit this reservation request."
-                    : "I confirm that the details above are correct and I agree to continue to the payment process."}
+                    : "I confirm that the details above are correct and I agree to submit this unpaid reservation request."}
                 </span>
               </label>
 
-              {draft.bookingId && <p role="status" className="mt-6 rounded-lg border border-[var(--green-primary)]/20 bg-[var(--surface-soft)] p-4 text-sm font-semibold text-[var(--green-dark)]">Reservation saved: {draft.bookingReference}. {emailDelivered === true ? "Check your email for tour details and the payment link." : "Email delivery has not been confirmed. Contact the travel office with this reference."}</p>}
+              {draft.bookingId && <p role="status" className="mt-6 rounded-lg border border-[var(--green-primary)]/20 bg-[var(--surface-soft)] p-4 text-sm font-semibold text-[var(--green-dark)]">Reservation saved: {draft.bookingReference}. {emailDelivered === true ? "Check your email for tour details and the reservation link." : "Email delivery has not been confirmed. Contact the travel office with this reference."}</p>}
 
               {/* ==========================================
                   BUTTONS
@@ -1011,7 +998,7 @@ export default function BookingSummaryPage() {
                         ? "Please Wait..."
                         : quoteLoading
                           ? "Calculating..."
-                          : "Proceed to Payment"}
+                          : "Submit & View Confirmation"}
                     </Button>
                 </div>
               </div>

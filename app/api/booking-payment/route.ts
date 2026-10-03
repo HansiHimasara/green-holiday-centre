@@ -1,10 +1,11 @@
+import { withApi } from "@/src/server/http/guard";
 import { NextResponse } from "next/server";
 import { db } from "@/src/prisma/db";
-import { verifyPaymentLink } from "@/src/server/bookingLinks";
+import { receiptToken, verifyPaymentLink } from "@/src/server/bookingLinks";
 
 export const runtime = "nodejs";
 
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   const url = new URL(request.url);
   const id = Number(url.searchParams.get("booking"));
   const token = url.searchParams.get("token") || "";
@@ -15,15 +16,18 @@ export async function GET(request: Request) {
   if (!customer || !verifyPaymentLink(id, customer.email, token)) {
     return NextResponse.json({ error: "Invalid payment link." }, { status: 403 });
   }
-  return NextResponse.json({ booking: {
-    id: booking.id, bookingReference: booking.bookingReference,
+  return NextResponse.json({ confirmationToken: receiptToken(id, booking.bookingReference), booking: {
+    id: booking.id, bookingReference: booking.bookingReference, serviceType: booking.serviceType,
     amount: Number(booking.totalAmount), currency: booking.currency,
     status: booking.status, paymentStatus: booking.paymentStatus,
   } });
 }
 
-export async function POST() {
+async function handlePOST() {
   // A payment must be initiated by the contracted provider's signed hosted checkout.
   // Never accept card details or mark a booking paid from a browser request.
   return NextResponse.json({ error: "The payment gateway is not configured. Please contact Green Holiday Centre." }, { status: 503 });
 }
+export const GET = withApi(handleGET, "/api/booking-payment");
+
+export const POST = withApi(handlePOST, "/api/booking-payment");
