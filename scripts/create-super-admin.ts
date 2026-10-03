@@ -1,5 +1,6 @@
 import "dotenv/config";
 
+import { validateBody } from "../src/server/http/validation";
 import { db } from "../src/prisma/db";
 import { hashPassword } from "../src/server/auth/password";
 
@@ -37,6 +38,8 @@ async function main() {
       "Password must contain at least 8 characters."
     );
   }
+
+  validateBody({ fullName, username, email, password }, "/api/admin/users");
 
   // Allow only one Super Admin
   const existingSuperAdmin =
@@ -107,6 +110,7 @@ async function main() {
   console.log(`Name: ${user.fullName}`);
   console.log(`Email: ${user.email}`);
   console.log(`Role: ${user.role}`);
+  process.exit(0);
   console.log("");
 }
 

@@ -1,3 +1,4 @@
+import { withApi } from "@/src/server/http/guard";
 import { NextResponse } from "next/server";
 
 import { db } from "@/src/prisma/db";
@@ -8,11 +9,12 @@ import {
 
 import {
   createSession,
+  logoutCurrentUser,
 } from "@/src/server/auth/session";
 
 export const runtime = "nodejs";
 
-export async function POST(
+async function handlePOST(
   request: Request
 ) {
   try {
@@ -68,7 +70,7 @@ export async function POST(
         })
         .first();
 
-    if (!user) {
+    if (!user || user.status !== "ACTIVE" || !["ADMIN", "SUPER_ADMIN"].includes(user.role)) {
       return NextResponse.json(
         {
           error:
@@ -76,18 +78,6 @@ export async function POST(
         },
         {
           status: 401,
-        }
-      );
-    }
-
-    if (user.status !== "ACTIVE") {
-      return NextResponse.json(
-        {
-          error:
-            "This account is disabled.",
-        },
-        {
-          status: 403,
         }
       );
     }
@@ -119,6 +109,7 @@ export async function POST(
           new Date().toISOString(),
       });
 
+    await logoutCurrentUser();
     await createSession(
       user.id,
       remember
@@ -153,3 +144,4 @@ export async function POST(
     );
   }
 }
+export const POST = withApi(handlePOST, "/api/auth/login");

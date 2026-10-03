@@ -65,7 +65,7 @@ export async function getCurrentUser() {
       SESSION_COOKIE
     )?.value;
 
-  if (!rawToken) {
+  if (!rawToken || !/^[A-Za-z0-9_-]{43}$/.test(rawToken)) {
     return null;
   }
 
@@ -83,10 +83,8 @@ export async function getCurrentUser() {
     return null;
   }
 
-  const expired =
-    new Date(
-      session.expiresAt
-    ).getTime() <= Date.now();
+  const expiry = new Date(session.expiresAt).getTime();
+  const expired = !Number.isFinite(expiry) || expiry <= Date.now();
 
   if (expired) {
     await db.orm.public.Session
@@ -95,9 +93,7 @@ export async function getCurrentUser() {
       })
       .delete();
 
-    cookieStore.delete(
-      SESSION_COOKIE
-    );
+    // Server Components cannot mutate cookies. An expired token is simply rejected.
 
     return null;
   }

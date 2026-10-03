@@ -1,3 +1,4 @@
+import { withApi } from "@/src/server/http/guard";
 import {
   createHash,
   randomBytes,
@@ -10,7 +11,7 @@ import { sendPasswordResetEmail } from "@/src/server/email/passwordReset";
 
 export const runtime = "nodejs";
 
-export async function POST(
+async function handlePOST(
   request: Request
 ) {
   try {
@@ -118,14 +119,12 @@ export async function POST(
       `${appUrl}/admin/login?reset=${rawToken}`;
 
     // Send reset link to the administrator email
-    await sendPasswordResetEmail(
-      user.email,
-      resetLink
-    );
+    try { await sendPasswordResetEmail(user.email, resetLink); }
+    catch (error) { console.error("Reset email delivery failed:", error); }
 
     return NextResponse.json({
       message:
-        "Password reset link sent. Please check your email.",
+        "If an administrator account exists for this email, a password reset link has been sent.",
     });
   } catch (error) {
     console.error(
@@ -144,3 +143,4 @@ export async function POST(
     );
   }
 }
+export const POST = withApi(handlePOST, "/api/auth/password-reset/request");

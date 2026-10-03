@@ -41,9 +41,9 @@ function scryptAsync(
 export async function hashPassword(
   password: string
 ): Promise<string> {
-  if (password.length < 8) {
+  if (password.length < 8 || password.length > 128) {
     throw new Error(
-      "Password must contain at least 8 characters."
+      "Password must contain 8–128 characters."
     );
   }
 
@@ -89,6 +89,8 @@ export async function verifyPassword(
     ) {
       return false;
     }
+
+    if (password.length > 128 || nValue !== String(N) || rValue !== String(R) || pValue !== String(P) || !/^[a-f0-9]{32}$/.test(salt) || !/^[a-f0-9]{128}$/.test(storedHash)) return false;
 
     const expectedHash =
       Buffer.from(storedHash, "hex");

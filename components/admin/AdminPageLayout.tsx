@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch as fetch } from "@/src/client/apiFetch";
+
 import type { ReactNode } from "react";
 import {
   useEffect,

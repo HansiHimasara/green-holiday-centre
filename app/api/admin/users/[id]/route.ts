@@ -1,3 +1,4 @@
+import { withApi } from "@/src/server/http/guard";
 import { NextResponse } from "next/server";
 
 import { db } from "@/src/prisma/db";
@@ -11,7 +12,7 @@ type RouteContext = {
   }>;
 };
 
-export async function DELETE(
+async function handleDELETE(
   request: Request,
   context: RouteContext
 ) {
@@ -135,3 +136,4 @@ export async function DELETE(
     );
   }
 }
+export const DELETE = withApi(handleDELETE, "/api/admin/users/:id");

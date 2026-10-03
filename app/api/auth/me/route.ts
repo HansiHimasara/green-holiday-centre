@@ -1,3 +1,5 @@
+import { readProfilePhoto } from "@/src/server/http/profilePhoto";
+import { withApi } from "@/src/server/http/guard";
 import { NextResponse } from "next/server";
 
 import {
@@ -7,7 +9,7 @@ import { db } from "@/src/prisma/db";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+async function handleGET() {
   try {
     const user = await getCurrentUser();
 
@@ -52,21 +54,30 @@ export async function GET() {
   }
 }
 
-export async function PATCH(request: Request) {
+async function handlePATCH(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   const body = await request.json();
   const fullName = String(body.fullName ?? "").trim();
-  const username = String(body.username ?? "").trim();
+  const username = String(body.username ?? "").trim().toLowerCase();
   const email = String(body.email ?? "").trim().toLowerCase();
   const phone = String(body.phone ?? "").trim();
   if (!fullName || !username || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !phone) {
     return NextResponse.json({ error: "Enter a name, username, valid email and phone number." }, { status: 400 });
   }
   try {
-    const updated = await db.orm.public.User.where({ id: user.id }).update({ fullName, username, email, phone });
-    return NextResponse.json({ user: updated });
+    const updated = await db.orm.public.User.where({ id: user.id }).update({ fullName, username, email, phone, ...(Object.hasOwn(body, "photo") ? { profileImageUrl: readProfilePhoto(body.photo) } : {}) });
+    if (!updated) return NextResponse.json({ error: "Account not found." }, { status: 404 });
+    return NextResponse.json({ user: {
+      id: updated.id, fullName: updated.fullName, username: updated.username,
+      email: updated.email, phone: updated.phone, role: updated.role,
+      status: updated.status, profileImageUrl: updated.profileImageUrl,
+      lastLoginAt: updated.lastLoginAt,
+    } });
   } catch {
     return NextResponse.json({ error: "The username or email may already be in use." }, { status: 409 });
   }
 }
+export const GET = withApi(handleGET, "/api/auth/me");
+
+export const PATCH = withApi(handlePATCH, "/api/auth/me");
