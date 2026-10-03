@@ -19,6 +19,7 @@ export default function Textarea({
       )}
 
       <textarea
+        maxLength={2000}
         {...props}
         className={`min-h-[92px] w-full resize-none rounded-md border border-[#DDE4DE] bg-white px-4 py-3 text-[14px] text-[var(--text-primary)] outline-none transition-colors placeholder:text-[#7D8981] focus:border-[var(--green-primary)] ${className}`}
       />

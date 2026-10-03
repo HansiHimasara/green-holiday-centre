@@ -1,3 +1,4 @@
+import { withApi } from "@/src/server/http/guard";
 import { NextResponse } from "next/server";
 
 import { db } from "@/src/prisma/db";
@@ -5,7 +6,7 @@ import { db } from "@/src/prisma/db";
 export const runtime = "nodejs";
 
 /* Public: contact form message */
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const body = await request.json();
 
@@ -63,3 +64,5 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export const POST = withApi(handlePOST, "/api/contact");

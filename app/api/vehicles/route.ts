@@ -1,3 +1,4 @@
+import { withApi } from "@/src/server/http/guard";
 import { NextResponse } from "next/server";
 
 import { db } from "@/src/prisma/db";
@@ -11,9 +12,10 @@ type VehicleRecord = {
   luggageCapacity: number;
   imageUrl: string | null;
   status: string;
+  ratePerKm: number;
 };
 
-export async function GET() {
+async function handleGET() {
   try {
     const vehicles = (await db.orm.public.VehicleType
       .where({
@@ -22,6 +24,7 @@ export async function GET() {
       .all()) as VehicleRecord[];
 
     const vehicleList = vehicles
+      .filter(vehicle => Number.isFinite(Number(vehicle.ratePerKm)) && Number(vehicle.ratePerKm) > 0)
       .map((vehicle) => ({
         id: vehicle.id,
         name: vehicle.name,
@@ -48,3 +51,4 @@ export async function GET() {
     );
   }
 }
+export const GET = withApi(handleGET, "/api/vehicles");

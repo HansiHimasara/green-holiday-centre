@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch as fetch } from "@/src/client/apiFetch";
+
 import { earliestBookingDate } from "@/src/client/bookingDates";
 
 import {
@@ -202,6 +204,7 @@ function LocationAutocomplete({
       !isOpen ||
       query.length < 2
     ) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronize browser-only draft/URL state after hydration.
       setSuggestions([]);
       setLoading(false);
 
@@ -571,6 +574,7 @@ export default function RoundTourPage() {
     }
 
     if (draft.travelDate) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronize browser-only draft/URL state after hydration.
       setStartDate(
         draft.travelDate
       );
@@ -1005,7 +1009,7 @@ export default function RoundTourPage() {
 
   function handleContinue() {
     if (startDate && startDate < earliestBookingDate()) {
-      window.alert("Bookings must be made at least two calendar days ahead.");
+      window.alert("Bookings must be made at least four calendar days ahead.");
       return;
     }
 

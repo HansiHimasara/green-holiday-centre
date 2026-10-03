@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch as fetch } from "@/src/client/apiFetch";
+
 import Link from "next/link";
 import {
   usePathname,
@@ -72,37 +74,17 @@ export default function AdminSidebar({
   ] = useState(false);
 
   async function handleLogout() {
-    if (loggingOut) {
-      return;
-    }
-
+    if (loggingOut) return;
+    setLoggingOut(true);
     try {
-      setLoggingOut(true);
-
-      const response = await fetch(
-        "/api/auth/logout",
-        {
-          method: "POST",
-        }
-      );
-
+      const response = await fetch("/api/auth/logout", { method: "POST" });
       if (!response.ok) {
-        console.error(
-          "Logout request failed."
-        );
+        window.alert("Unable to log out. Please try again.");
+        return;
       }
-    } catch (error) {
-      console.error(
-        "Logout error:",
-        error
-      );
-    } finally {
-      router.replace(
-        "/admin/login"
-      );
-
+      router.replace("/admin/login");
       router.refresh();
-
+    } finally {
       setLoggingOut(false);
     }
   }
@@ -127,10 +109,10 @@ export default function AdminSidebar({
                 <button
                   type="button"
                   onClick={
-                    onOpenAdminAccounts
+                    onOpenAdminAccounts ?? (() => router.push("/admin/accounts"))
                   }
                   className={`mb-2 flex w-full items-center gap-4 rounded-lg px-4 py-3 text-left text-sm transition-colors ${
-                    adminAccountsOpen
+                    adminAccountsOpen || pathname === "/admin/accounts"
                       ? "bg-[#439646] font-semibold text-white"
                       : "text-white/90 hover:bg-white/10"
                   }`}

@@ -1,3 +1,4 @@
+import { withApi } from "@/src/server/http/guard";
 import { NextResponse } from "next/server";
 
 import { db } from "@/src/prisma/db";
@@ -7,7 +8,7 @@ import { requireSuperAdmin } from "@/src/server/auth/session";
 export const runtime = "nodejs";
 
 // Get all normal Admin accounts
-export async function GET() {
+async function handleGET() {
   try {
     // Only SUPER_ADMIN can view Admin accounts
     const superAdmin =
@@ -75,7 +76,7 @@ export async function GET() {
 }
 
 // Create a new normal Admin account
-export async function POST(
+async function handlePOST(
   request: Request
 ) {
   try {
@@ -266,3 +267,6 @@ export async function POST(
     );
   }
 }
+export const GET = withApi(handleGET, "/api/admin/users");
+
+export const POST = withApi(handlePOST, "/api/admin/users");

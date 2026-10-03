@@ -1,3 +1,4 @@
+import { withApi } from "@/src/server/http/guard";
 import { NextResponse } from "next/server";
 
 import { db } from "@/src/prisma/db";
@@ -5,7 +6,7 @@ import { getCurrentUser } from "@/src/server/auth/session";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+async function handleGET() {
   try {
     const user =
       await getCurrentUser();
@@ -137,3 +138,4 @@ export async function GET() {
     );
   }
 }
+export const GET = withApi(handleGET, "/api/admin/bookings");

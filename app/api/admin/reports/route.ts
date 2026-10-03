@@ -1,10 +1,11 @@
+import { withApi } from "@/src/server/http/guard";
 import { NextResponse } from "next/server";
 import { db } from "@/src/prisma/db";
 import { requireAdminUser } from "@/src/server/auth/requireAdmin";
 
 export const runtime = "nodejs";
 
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   if (!(await requireAdminUser())) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   const period = new URL(request.url).searchParams.get("period") || "";
   if (!/^\d{4}-\d{2}$/.test(period)) return NextResponse.json({ error: "Select a valid month." }, { status: 400 });
@@ -26,3 +27,4 @@ export async function GET(request: Request) {
   }
   return NextResponse.json({ current: calculate(current), previous: calculate(previous) });
 }
+export const GET = withApi(handleGET, "/api/admin/reports");

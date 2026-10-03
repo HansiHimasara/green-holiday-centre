@@ -7,7 +7,14 @@ export function paymentLinkToken(id: number, email: string): string {
 }
 
 export function verifyPaymentLink(id: number, email: string, token: string): boolean {
-  if (!token) return false;
+  if (!/^[A-Za-z0-9_-]{43}$/.test(token)) return false;
   const expected = paymentLinkToken(id, email);
   return token.length === expected.length && timingSafeEqual(Buffer.from(expected), Buffer.from(token));
+}
+
+export function receiptToken(id: number, reference: string): string {
+  return paymentLinkToken(id, `receipt:${reference}`);
+}
+export function verifyReceiptToken(id: number, reference: string, token: string): boolean {
+  return verifyPaymentLink(id, `receipt:${reference}`, token);
 }

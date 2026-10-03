@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch as fetch } from "@/src/client/apiFetch";
+
 import { useEffect, useState } from "react";
 
 import AdminPageLayout from "@/components/admin/AdminPageLayout";
@@ -95,6 +97,7 @@ export default function AdminVehiclesPage() {
     const data = await response.json();
     setVehicles(data.vehicles ?? []);
   }
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- This loader updates state only after its asynchronous fetch.
   useEffect(() => { void reload(); }, []);
 
 
@@ -623,7 +626,7 @@ export default function AdminVehiclesPage() {
                             }
                             placeholder="Description"
                             className={`${inputClasses} min-w-[190px]`}
-                          /><input type="url" aria-label="Vehicle photo URL" placeholder="HTTPS photo URL" value={editingVehicle.imageUrl ?? ""} onChange={(event) => updateEditingField("imageUrl", event.target.value)} className={`${inputClasses} min-w-[190px]`} /></div>
+                          /><input type="text" aria-label="Vehicle photo URL" placeholder="HTTPS URL or /images/vehicles/photo.png" value={editingVehicle.imageUrl ?? ""} onChange={(event) => updateEditingField("imageUrl", event.target.value)} className={`${inputClasses} min-w-[190px]`} /></div>
                         ) : (
                           <span className="text-[12px] text-[var(--text-secondary)]">
                             {vehicle.description ||

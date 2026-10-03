@@ -1,3 +1,4 @@
+import { withApi } from "@/src/server/http/guard";
 import { createHash } from "node:crypto";
 
 import { NextResponse } from "next/server";
@@ -7,7 +8,7 @@ import { hashPassword } from "@/src/server/auth/password";
 
 export const runtime = "nodejs";
 
-export async function POST(
+async function handlePOST(
   request: Request
 ) {
   try {
@@ -126,6 +127,15 @@ export async function POST(
 
     await db.transaction(
       async (tx) => {
+        // Claim once inside the transaction; concurrent reuse must not change a password.
+        const claimed = await tx.orm.public.PasswordResetToken
+          .where({ id: resetToken.id, usedAt: null })
+          .update({ usedAt: new Date().toISOString() });
+        if (!claimed || new Date(claimed.expiresAt).getTime() <= Date.now()) {
+          throw new Error("Reset token is expired or already used.");
+        }
+        const activeUser = await tx.orm.public.User.where({ id: resetToken.userId, status: "ACTIVE" }).first();
+        if (!activeUser) throw new Error("Account unavailable.");
         // Save the new password
         await tx.orm.public.User
           .where({
@@ -133,16 +143,6 @@ export async function POST(
           })
           .update({
             passwordHash,
-          });
-
-        // Mark the reset token as used
-        await tx.orm.public.PasswordResetToken
-          .where({
-            id: resetToken.id,
-          })
-          .update({
-            usedAt:
-              new Date().toISOString(),
           });
 
         // Log out all old sessions
@@ -176,3 +176,4 @@ export async function POST(
     );
   }
 }
+export const POST = withApi(handlePOST, "/api/auth/password-reset/confirm");

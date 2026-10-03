@@ -1,3 +1,5 @@
+import { parseVehicleRate } from "@/src/server/http/validation";
+import { withApi } from "@/src/server/http/guard";
 import { NextResponse } from "next/server";
 
 import { db } from "@/src/prisma/db";
@@ -31,7 +33,7 @@ function optionalText(
   return text || null;
 }
 
-export async function PATCH(
+async function handlePATCH(
   request: Request,
   context: {
     params: Promise<{
@@ -119,7 +121,7 @@ export async function PATCH(
         body.status ?? ""
       ).toUpperCase();
 
-    const rate = Number(String(body.rate ?? "").replace(/[^0-9.]/g, ""));
+    const rate = parseVehicleRate(body.rate);
     const photo = String(body.imageUrl ?? "").trim();
     if (!Number.isInteger(rate) || rate <= 0 || (photo && !/^https:\/\/[^\s]+$/.test(photo) && !/^\/images\/[^\s]+$/.test(photo))) {
       return NextResponse.json({ error: "Enter a positive whole-number LKR/km rate and a valid HTTPS photo URL." }, { status: 400 });
@@ -237,7 +239,7 @@ export async function PATCH(
               body.description
             ),
 
-          ratePerKm: Number(String(body.rate ?? "").replace(/[^0-9.]/g, "")),
+          ratePerKm: parseVehicleRate(body.rate),
           imageUrl: optionalText(body.imageUrl),
           status,
         });
@@ -319,7 +321,7 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
+async function handleDELETE(
   _request: Request,
   context: {
     params: Promise<{
@@ -448,3 +450,6 @@ export async function DELETE(
     );
   }
 }
+export const PATCH = withApi(handlePATCH, "/api/admin/vehicles/:id");
+
+export const DELETE = withApi(handleDELETE, "/api/admin/vehicles/:id");

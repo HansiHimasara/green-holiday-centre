@@ -17,6 +17,11 @@ export type BookingCustomer = {
 };
 
 export type BookingDraft = {
+  requestId?: string;
+  confirmationToken?: string;
+  emailSent?: boolean;
+  status?: string;
+  paymentStatus?: string;
   serviceType?: BookingServiceType;
 
   vehicleTypeId?: number;
@@ -106,9 +111,8 @@ export function getBookingDraft(): BookingDraft {
       return {};
     }
 
-    return JSON.parse(
-      stored
-    ) as BookingDraft;
+    const parsed: unknown = JSON.parse(stored);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as BookingDraft : {};
   } catch (error) {
     console.error(
       "Unable to read booking draft:",
@@ -133,9 +137,12 @@ export function saveBookingDraft(
     const current =
       getBookingDraft();
 
+    const itineraryKeys: (keyof BookingDraft)[] = ["serviceType", "vehicleTypeId", "travelDate", "returnDate", "passengerCount", "luggageCount", "numberOfNights", "pickupLocation", "dropoffLocation", "destinations", "customer", "flightNumber", "specialRequests"];
+    const changed = itineraryKeys.some(key => key in updates && JSON.stringify(current[key]) !== JSON.stringify(updates[key]));
     const updated: BookingDraft = {
       ...current,
       ...updates,
+      ...(changed ? { bookingId: undefined, bookingReference: undefined, requestId: undefined, confirmationToken: undefined, emailSent: undefined, status: undefined, paymentStatus: undefined, totalAmount: undefined, currency: undefined } : {}),
     };
 
     window.sessionStorage.setItem(

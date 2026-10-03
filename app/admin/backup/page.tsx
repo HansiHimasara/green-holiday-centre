@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { apiFetch as fetch } from "@/src/client/apiFetch";
+
+import { useState } from "react";
 
 import AdminPageLayout from "@/components/admin/AdminPageLayout";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
@@ -35,9 +37,10 @@ export default function AdminBackupPage() {
     link.download = `green-holiday-data-${new Date().toISOString().slice(0, 10)}.json`;
     link.click();
     URL.revokeObjectURL(url);
+    setBackups(current => [{ id: Date.now(), date: new Date().toISOString(), size: `${(blob.size / 1024).toFixed(1)} KB`, type: "Business data export", status: "successful" }, ...current]);
     setMessage("Business data export downloaded. Configure automated database backups and restoration in your Postgres provider.");
   }
-  function handleRestore(_id: number) {
+  function handleRestore() {
     setMessage("Restore must be performed from a verified database backup in your Postgres provider.");
   }
 
@@ -123,9 +126,7 @@ export default function AdminBackupPage() {
                 type="button"
                 onClick={() =>
                   latestBackup &&
-                  handleRestore(
-                    latestBackup.id,
-                  )
+                  handleRestore()
                 }
                 disabled={!latestBackup}
                 className="
@@ -260,9 +261,7 @@ export default function AdminBackupPage() {
                         <button
                           type="button"
                           onClick={() =>
-                            handleRestore(
-                              backup.id,
-                            )
+                            handleRestore()
                           }
                           className="
                             inline-flex

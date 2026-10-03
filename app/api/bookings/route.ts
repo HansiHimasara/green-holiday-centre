@@ -1,7 +1,8 @@
+import { withApi } from "@/src/server/http/guard";
 import { sendBookingEmail } from "@/src/server/email/booking";
-import { paymentLinkToken } from "@/src/server/bookingLinks";
+import { receiptToken } from "@/src/server/bookingLinks";
 import { validBookingDate, earliestBookingDate } from "@/src/server/bookingDates";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 
 import { NextResponse } from "next/server";
 
@@ -9,6 +10,7 @@ import { db } from "@/src/prisma/db";
 
 import {
   calculateBookingPrice,
+  BookingPricingError,
   type BookingPricingServiceType,
 } from "@/src/server/bookingPricing";
 
@@ -87,13 +89,31 @@ function readDestinations(
     .filter(Boolean);
 }
 
-export async function POST(
+async function findRetry(bookingReference: string) {
+  const booking = await db.orm.public.Booking.where({ bookingReference }).first();
+  if (!booking) return null;
+  return NextResponse.json({ message: "This reservation has already been created.", emailSent: false,
+    confirmationToken: receiptToken(booking.id, booking.bookingReference),
+    booking: { id: booking.id, bookingReference: booking.bookingReference, serviceType: booking.serviceType,
+      status: booking.status, paymentStatus: booking.paymentStatus, totalAmount: Number(booking.totalAmount), currency: booking.currency },
+  });
+}
+
+async function handlePOST(
   request: Request
 ) {
+  let retryReference = "";
   try {
     const body =
       await request.json();
 
+    // Fail before saving if secure confirmation links cannot be issued.
+    receiptToken(0, "configuration-check");
+    const requestId = body.requestId;
+    if (requestId !== undefined && (typeof requestId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId))) {
+      return NextResponse.json({ error: "Invalid booking request identifier." }, { status: 400 });
+    }
+    retryReference = requestId ? `GH-${createHash("sha256").update(requestId).digest("hex").slice(0, 24).toUpperCase()}` : "";
     const customer =
       body.customer ?? {};
 
@@ -319,20 +339,12 @@ export async function POST(
       );
     }
 
-    if (body.returnDate && (String(body.returnDate) < travelDate || !/^\d{4}-\d{2}-\d{2}$/.test(String(body.returnDate)))) {
+    if (body.returnDate && (String(body.returnDate) < travelDate || !validBookingDate(String(body.returnDate)))) {
       return NextResponse.json({ error: "Return date must be on or after travel date." }, { status: 400 });
     }
 
     if (!/^\+[1-9]\d{7,14}$/.test(phone.replace(/[\s().-]/g, "")) || !/^[A-Z0-9]{5,20}$/i.test(passportNumber)) {
       return NextResponse.json({ error: "Enter a valid international phone number and passport number." }, { status: 400 });
-    }
-
-    if (body.reservationOnly === true) {
-      const threeDays = new Date(`${earliestBookingDate()}T00:00:00Z`);
-      threeDays.setUTCDate(threeDays.getUTCDate() + 1);
-      if (travelDate <= threeDays.toISOString().slice(0, 10)) {
-        return NextResponse.json({ error: "Reservations require a travel date at least four days ahead. For closer dates, contact the travel office." }, { status: 400 });
-      }
     }
 
     /* ==========================================
@@ -397,10 +409,22 @@ export async function POST(
       );
     }
 
+    if (serviceType === "ROUND_TOUR") {
+      const expectedReturn = new Date(`${travelDate}T00:00:00Z`);
+      expectedReturn.setUTCDate(expectedReturn.getUTCDate() + destinations.length);
+      if (numberOfNights !== destinations.length || body.returnDate !== expectedReturn.toISOString().slice(0, 10)) {
+        return NextResponse.json({ error: "Round Tour nights and return date must match the overnight destinations." }, { status: 400 });
+      }
+    }
+
     /* ==========================================
        GET REAL VEHICLE
     ========================================== */
 
+    if (retryReference) {
+      const retry = await findRetry(retryReference);
+      if (retry) return retry;
+    }
     const vehicle =
       await db.orm.public.VehicleType
         .where({
@@ -511,8 +535,7 @@ export async function POST(
     const currency =
       calculatedPrice.currency;
 
-    const bookingReference =
-      createBookingReference();
+    const bookingReference = retryReference || createBookingReference();
 
     /* ==========================================
        SAVE CUSTOMER + BOOKING
@@ -534,45 +557,9 @@ export async function POST(
           if (
             existingCustomer
           ) {
-            const updatedCustomer =
-              await tx.orm.public.Customer
-                .where({
-                  id:
-                    existingCustomer.id,
-                })
-                .update({
-                  fullName,
-
-                  phone,
-
-                  passportNumber,
-
-                  nationality:
-                    optionalText(
-                      customer.nationality
-                    ),
-
-                  address:
-                    optionalText(
-                      customer.address
-                    ),
-
-                  specialRequirements:
-                    optionalText(
-                      customer.specialRequirements
-                    ),
-                });
-
-            if (
-              !updatedCustomer
-            ) {
-              throw new Error(
-                "Unable to update customer."
-              );
-            }
-
-            customerId =
-              updatedCustomer.id;
+            // A guest request must never overwrite an existing customer's personal data.
+            // Existing records can only be edited through the authenticated admin API.
+            customerId = existingCustomer.id;
           } else {
             const newCustomer =
               await tx.orm.public.Customer.create(
@@ -722,12 +709,12 @@ export async function POST(
       );
 
     let emailSent = false;
-    if (body.reservationOnly === true) {
+    {
       try {
         const baseUrl = process.env.APP_BASE_URL;
-        if (!baseUrl || !/^https:\/\//.test(baseUrl)) throw new Error("APP_BASE_URL is not configured.");
-        const token = paymentLinkToken(result.booking.id, email);
-        const paymentLink = `${baseUrl}/customer/booking/payment?booking=${result.booking.id}&token=${encodeURIComponent(token)}`;
+        if (!baseUrl || !/^https?:\/\//.test(baseUrl)) throw new Error("APP_BASE_URL is not configured.");
+        const token = receiptToken(result.booking.id, bookingReference);
+        const paymentLink = `${baseUrl}/customer/booking/confirmation?booking=${result.booking.id}&token=${encodeURIComponent(token)}`;
         await sendBookingEmail({
           to: email, name: fullName, reference: bookingReference, service: serviceType,
           travelDate, vehicle: vehicle.name, pickup: pickupLocation, dropoff: dropoffLocation,
@@ -748,6 +735,7 @@ export async function POST(
         message: emailSent ? "Reservation created and email sent." : "Booking created; email delivery could not be confirmed.",
 
         emailSent,
+        confirmationToken: receiptToken(result.booking.id, bookingReference),
 
         booking: {
           id:
@@ -798,15 +786,16 @@ export async function POST(
       }
     );
   } catch (error) {
+    // A concurrent retry may have committed the same unique booking reference.
+    if (retryReference) {
+      try { const retry = await findRetry(retryReference); if (retry) return retry; } catch { /* preserve the original failure below */ }
+    }
     console.error(
       "CREATE BOOKING ERROR:",
       error
     );
 
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Unable to create the booking.";
+    const message = error instanceof BookingPricingError ? error.message : "Unable to create the booking. Please check the details or contact the travel office.";
 
     return NextResponse.json(
       {
@@ -818,3 +807,4 @@ export async function POST(
     );
   }
 }
+export const POST = withApi(handlePOST, "/api/bookings");

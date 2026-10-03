@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch as fetch } from "@/src/client/apiFetch";
+
 import { earliestBookingDate } from "@/src/client/bookingDates";
 
 import {
@@ -597,6 +599,7 @@ export default function AirportTransferPage() {
     if (requestedVehicle && /^\d+$/.test(requestedVehicle)) {
       const vehicleTypeId = Number(requestedVehicle);
       saveBookingDraft({ vehicleTypeId });
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronize browser-only draft/URL state after hydration.
       setSelectedVehicle(requestedVehicle);
     }
     const draft =
@@ -1070,7 +1073,7 @@ export default function AirportTransferPage() {
         );
 
       if (travelDate && travelDate < earliestBookingDate()) {
-      window.alert("Bookings must be made at least two calendar days ahead.");
+      window.alert("Bookings must be made at least four calendar days ahead.");
       return;
     }
 

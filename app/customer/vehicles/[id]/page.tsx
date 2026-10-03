@@ -1,5 +1,5 @@
 export const dynamic = "force-dynamic";
-import Image from "next/image";
+import Image from "@/components/vehicles/VehicleImage";
 import { notFound } from "next/navigation";
 import { db } from "@/src/prisma/db";
 import { vehicleCategory } from "@/src/server/vehicles";
@@ -157,14 +157,14 @@ export default async function VehicleDetailsPage({ params }: { params: Promise<{
                   {/* BUTTONS */}
                   <div className="mt-8 flex flex-wrap gap-3">
                     <Button
-                      href={`/customer/booking/airport-transfer?vehicle=${row.id}`}
+                      href={row.ratePerKm > 0 ? `/customer/booking/airport-transfer?vehicle=${row.id}` : "/customer/contact"}
                       className="
                         min-w-[175px]
                         !bg-[var(--green-dark)]
                         hover:!bg-[var(--green-forest)]
                       "
                     >
-                      Book This Vehicle
+                      {row.ratePerKm > 0 ? "Book This Vehicle" : "Contact for a Quote"}
                     </Button>
 
                     <Button

@@ -1,3 +1,4 @@
+import { withApi } from "@/src/server/http/guard";
 import { NextResponse } from "next/server";
 
 import {
@@ -6,7 +7,7 @@ import {
 
 export const runtime = "nodejs";
 
-export async function POST() {
+async function handlePOST() {
   try {
     await logoutCurrentUser();
 
@@ -29,3 +30,4 @@ export async function POST() {
     );
   }
 }
+export const POST = withApi(handlePOST, "/api/auth/logout");

@@ -1,9 +1,11 @@
+import { withApi } from "@/src/server/http/guard";
 import { NextResponse } from "next/server";
 
 import { db } from "@/src/prisma/db";
 
 import {
   calculateBookingPrice,
+  BookingPricingError,
   type BookingPricingServiceType,
 } from "@/src/server/bookingPricing";
 
@@ -42,7 +44,7 @@ function readWaypoints(
     .filter(Boolean);
 }
 
-export async function POST(
+async function handlePOST(
   request: Request
 ) {
   try {
@@ -283,10 +285,8 @@ export async function POST(
       error
     );
 
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Unable to calculate transportation cost.";
+    const message = error instanceof BookingPricingError ? error.message :
+      "Unable to calculate transportation cost. Check the locations or contact the travel office.";
 
     return NextResponse.json(
       {
@@ -298,3 +298,4 @@ export async function POST(
     );
   }
 }
+export const POST = withApi(handlePOST, "/api/booking-quote");
