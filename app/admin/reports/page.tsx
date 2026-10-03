@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch as fetch } from "@/src/client/apiFetch";
+
 import { useState } from "react";
 
 import AdminPageLayout from "@/components/admin/AdminPageLayout";

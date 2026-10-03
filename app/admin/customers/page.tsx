@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch as fetch } from "@/src/client/apiFetch";
+
 import { useEffect, useState } from "react";
 
 import AdminPageLayout from "@/components/admin/AdminPageLayout";
@@ -47,6 +49,7 @@ export default function AdminCustomersPage() {
     const data = await response.json();
     setCustomers(data.customers ?? []);
   }
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- This loader updates state only after its asynchronous fetch.
   useEffect(() => { void reload(); }, []);
 
 

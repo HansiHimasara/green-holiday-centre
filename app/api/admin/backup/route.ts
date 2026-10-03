@@ -1,10 +1,11 @@
+import { withApi } from "@/src/server/http/guard";
 import { NextResponse } from "next/server";
 import { db } from "@/src/prisma/db";
 import { requireAdminUser } from "@/src/server/auth/requireAdmin";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+async function handleGET() {
   if (!(await requireAdminUser())) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   // Business-data export. Database restore and automated offsite backups belong to
   // the database provider and must be configured separately for production.
@@ -22,3 +23,4 @@ export async function GET() {
     },
   });
 }
+export const GET = withApi(handleGET, "/api/admin/backup");

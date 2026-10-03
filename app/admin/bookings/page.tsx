@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch as fetch } from "@/src/client/apiFetch";
+
 import { useEffect, useState } from "react";
 
 import AdminPageLayout from "@/components/admin/AdminPageLayout";
@@ -72,6 +74,7 @@ export default function AdminBookingsPage() {
     const data = await response.json();
     setBookings(data.bookings ?? []);
   }
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- This loader updates state only after its asynchronous fetch.
   useEffect(() => { void reload(); }, []);
   const vehicleOptions = [...new Set(bookings.map(booking => booking.vehicle))];
 
@@ -351,9 +354,7 @@ export default function AdminBookingsPage() {
                           <input
                             type="text"
                             value={editingBooking.id}
-                            onChange={(event) =>
-                              undefined
-                            }
+                            readOnly
                             className={`${inputClasses} min-w-[145px]`}
                           />
                         ) : (
@@ -373,9 +374,7 @@ export default function AdminBookingsPage() {
                             value={
                               editingBooking.customer
                             }
-                            onChange={(event) =>
-                              undefined
-                            }
+                            readOnly
                             placeholder="Customer name"
                             className={`${inputClasses} min-w-[160px]`}
                           />
@@ -394,9 +393,7 @@ export default function AdminBookingsPage() {
                           <input
                             type="date"
                             value={editingBooking.date}
-                            onChange={(event) =>
-                              undefined
-                            }
+                            readOnly
                             className={`${inputClasses} min-w-[145px]`}
                           />
                         ) : (
@@ -417,9 +414,7 @@ export default function AdminBookingsPage() {
                             value={
                               editingBooking.vehicle
                             }
-                            onChange={(event) =>
-                              undefined
-                            }
+                            readOnly
                             placeholder="Type or select vehicle"
                             className={`${inputClasses} min-w-[190px]`}
                           />

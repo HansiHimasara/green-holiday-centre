@@ -1,4 +1,7 @@
 "use client";
+import Image from "next/image";
+
+import { apiFetch as fetch } from "@/src/client/apiFetch";
 
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 
@@ -91,7 +94,13 @@ export default function AdminProfilePage() {
       return;
     }
 
-    setMessage("Profile photo upload requires a configured image storage service.");
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > 96 * 1024) {
+      setMessage("Choose a PNG, JPEG or WebP photo no larger than 96 KB."); return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => { handleFieldChange("photo", String(reader.result)); setIsEditing(true); setMessage("Click Save Changes to save your photo."); };
+    reader.onerror = () => setMessage("Unable to read this photo.");
+    reader.readAsDataURL(file);
   };
 
   const displayedProfile = isEditing
@@ -135,7 +144,7 @@ export default function AdminProfilePage() {
             <div className="flex w-full flex-col items-center md:w-[180px]">
               <div className="rounded-2xl border border-[var(--green-primary)]/15 bg-[var(--surface-soft)] p-4">
                 {displayedProfile.photo ? (
-                  <img
+                  <Image width={112} height={112} unoptimized
                     src={displayedProfile.photo}
                     alt={displayedProfile.fullName}
                     className="h-28 w-28 rounded-xl object-cover"

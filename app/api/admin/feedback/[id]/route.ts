@@ -1,3 +1,4 @@
+import { withApi } from "@/src/server/http/guard";
 import { NextResponse } from "next/server";
 
 import { db } from "@/src/prisma/db";
@@ -19,7 +20,7 @@ async function readId(context: RouteContext) {
     : null;
 }
 
-export async function PATCH(request: Request, context: RouteContext) {
+async function handlePATCH(request: Request, context: RouteContext) {
   try {
     if (!(await requireAdminUser())) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
@@ -74,7 +75,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 }
 
-export async function DELETE(_request: Request, context: RouteContext) {
+async function handleDELETE(_request: Request, context: RouteContext) {
   try {
     if (!(await requireAdminUser())) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
@@ -107,3 +108,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     );
   }
 }
+
+export const PATCH = withApi(handlePATCH, "/api/admin/feedback/:id");
+
+export const DELETE = withApi(handleDELETE, "/api/admin/feedback/:id");

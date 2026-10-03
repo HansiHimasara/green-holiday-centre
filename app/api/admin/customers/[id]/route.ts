@@ -1,3 +1,4 @@
+import { withApi } from "@/src/server/http/guard";
 import { NextResponse } from "next/server";
 
 import { db } from "@/src/prisma/db";
@@ -31,7 +32,7 @@ function optionalText(
   return text || null;
 }
 
-export async function PATCH(
+async function handlePATCH(
   request: Request,
   context: {
     params: Promise<{
@@ -255,7 +256,7 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
+async function handleDELETE(
   _request: Request,
   context: {
     params: Promise<{
@@ -383,3 +384,6 @@ export async function DELETE(
     );
   }
 }
+export const PATCH = withApi(handlePATCH, "/api/admin/customers/:id");
+
+export const DELETE = withApi(handleDELETE, "/api/admin/customers/:id");

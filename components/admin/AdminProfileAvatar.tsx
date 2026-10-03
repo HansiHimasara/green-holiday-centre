@@ -30,6 +30,7 @@ export default function AdminProfileAvatar({
       >
         <Image
           src={image}
+          unoptimized={image.startsWith("https://") || image.startsWith("data:")}
           alt={name}
           fill
           className="object-cover"

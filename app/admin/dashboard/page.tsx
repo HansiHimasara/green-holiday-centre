@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch as fetch } from "@/src/client/apiFetch";
+
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 

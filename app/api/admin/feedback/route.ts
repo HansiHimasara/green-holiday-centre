@@ -1,3 +1,4 @@
+import { withApi } from "@/src/server/http/guard";
 import { NextResponse } from "next/server";
 
 import { db } from "@/src/prisma/db";
@@ -6,7 +7,7 @@ import { readRating, toAdminFeedback } from "@/src/server/feedback";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+async function handleGET() {
   try {
     if (!(await requireAdminUser())) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
@@ -29,7 +30,7 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     if (!(await requireAdminUser())) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
@@ -74,3 +75,7 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export const GET = withApi(handleGET, "/api/admin/feedback");
+
+export const POST = withApi(handlePOST, "/api/admin/feedback");

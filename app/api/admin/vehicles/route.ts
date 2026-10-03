@@ -1,3 +1,5 @@
+import { parseVehicleRate } from "@/src/server/http/validation";
+import { withApi } from "@/src/server/http/guard";
 import { NextResponse } from "next/server";
 
 import { db } from "@/src/prisma/db";
@@ -31,7 +33,7 @@ function optionalText(
   return text || null;
 }
 
-export async function GET() {
+async function handleGET() {
   try {
     const user =
       await requireAdminUser();
@@ -116,7 +118,7 @@ export async function GET() {
   }
 }
 
-export async function POST(
+async function handlePOST(
   request: Request
 ) {
   try {
@@ -172,7 +174,7 @@ export async function POST(
         body.status ?? "active"
       ).toUpperCase();
 
-    const rate = Number(String(body.rate ?? "").replace(/[^0-9.]/g, ""));
+    const rate = parseVehicleRate(body.rate);
     const photo = String(body.imageUrl ?? "").trim();
     if (!Number.isInteger(rate) || rate <= 0 || (photo && !/^https:\/\/[^\s]+$/.test(photo) && !/^\/images\/[^\s]+$/.test(photo))) {
       return NextResponse.json({ error: "Enter a positive whole-number LKR/km rate and a valid HTTPS photo URL." }, { status: 400 });
@@ -277,7 +279,7 @@ export async function POST(
             null,
 
           imageUrl: optionalText(body.imageUrl),
-          ratePerKm: Number(String(body.rate ?? "").replace(/[^0-9.]/g, "")),
+          ratePerKm: parseVehicleRate(body.rate),
           status,
         }
       );
@@ -358,3 +360,6 @@ export async function POST(
     );
   }
 }
+export const GET = withApi(handleGET, "/api/admin/vehicles");
+
+export const POST = withApi(handlePOST, "/api/admin/vehicles");

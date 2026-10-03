@@ -1,3 +1,4 @@
+import { withApi } from "@/src/server/http/guard";
 import { NextResponse } from "next/server";
 
 import { db } from "@/src/prisma/db";
@@ -11,7 +12,7 @@ type BookingStatus =
   | "COMPLETED"
   | "CANCELLED";
 
-export async function PATCH(
+async function handlePATCH(
   request: Request,
   context: {
     params: Promise<{
@@ -114,10 +115,20 @@ export async function PATCH(
       );
     }
 
+    const transitions: Record<string, string[]> = {
+      PENDING: ["PENDING", "CONFIRMED", "CANCELLED"],
+      CONFIRMED: ["CONFIRMED", "COMPLETED", "CANCELLED"],
+      COMPLETED: ["COMPLETED"], CANCELLED: ["CANCELLED"],
+    };
+    if (!transitions[existingBooking.status]?.includes(status)) {
+      return NextResponse.json({ error: "This booking cannot move to the selected status." }, { status: 409 });
+    }
+
     const updatedBooking =
       await db.orm.public.Booking
         .where({
           id: bookingId,
+          status: existingBooking.status,
         })
         .update({
           status,
@@ -169,3 +180,4 @@ export async function PATCH(
     );
   }
 }
+export const PATCH = withApi(handlePATCH, "/api/admin/bookings/:id");
