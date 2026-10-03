@@ -24,7 +24,7 @@ function createDb() {
     url: databaseUrl,
 
     poolOptions: {
-      connectionTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
       idleTimeoutMillis: 10000,
     },
   });
@@ -38,14 +38,11 @@ const globalForDb =
     __greenHolidayDb?: Database;
   };
 
-export const db =
-  globalForDb.__greenHolidayDb ??
-  createDb();
-
-if (
-  process.env.NODE_ENV !==
-  "production"
-) {
-  globalForDb.__greenHolidayDb =
-    db;
-}
+// Instantiate on the first query, so builds do not require production credentials.
+export const db = new Proxy({} as Database, {
+  get(_target, property) {
+    const instance = globalForDb.__greenHolidayDb ??= createDb();
+    const value = Reflect.get(instance, property);
+    return typeof value === "function" ? value.bind(instance) : value;
+  },
+});
