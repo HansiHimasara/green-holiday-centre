@@ -58,15 +58,27 @@ async function handlePATCH(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   const body = await request.json();
-  const fullName = String(body.fullName ?? "").trim();
-  const username = String(body.username ?? "").trim().toLowerCase();
-  const email = String(body.email ?? "").trim().toLowerCase();
-  const phone = String(body.phone ?? "").trim();
-  if (!fullName || !username || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !phone) {
-    return NextResponse.json({ error: "Enter a name, username, valid email and phone number." }, { status: 400 });
+  const hasPhoto = Object.hasOwn(body, "photo");
+  const hasDetails = ["fullName", "username", "email", "phone"].some((field) => Object.hasOwn(body, field));
+  if (!hasPhoto && !hasDetails) {
+    return NextResponse.json({ error: "Choose a photo or enter your profile details." }, { status: 400 });
   }
+
+  let details: { fullName: string; username: string; email: string; phone: string } | undefined;
+  if (hasDetails) {
+    const fullName = String(body.fullName ?? "").trim();
+    const username = String(body.username ?? "").trim().toLowerCase();
+    const email = String(body.email ?? "").trim().toLowerCase();
+    const phone = String(body.phone ?? "").trim();
+    if (!fullName || !username || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !phone) {
+      return NextResponse.json({ error: "Enter a name, username, valid email and phone number." }, { status: 400 });
+    }
+    details = { fullName, username, email, phone };
+  }
+
+  const photo = hasPhoto ? { profileImageUrl: readProfilePhoto(body.photo) } : {};
   try {
-    const updated = await db.orm.public.User.where({ id: user.id }).update({ fullName, username, email, phone, ...(Object.hasOwn(body, "photo") ? { profileImageUrl: readProfilePhoto(body.photo) } : {}) });
+    const updated = await db.orm.public.User.where({ id: user.id }).update({ ...details, ...photo });
     if (!updated) return NextResponse.json({ error: "Account not found." }, { status: 404 });
     return NextResponse.json({ user: {
       id: updated.id, fullName: updated.fullName, username: updated.username,

@@ -68,11 +68,13 @@ export async function readJson(request: Request) {
   if (!reader) throw new HttpError(400, "A JSON body is required.");
   const chunks: Uint8Array[] = [];
   let length = 0;
+  // Leave room for a 2 MB profile photo encoded as base64, plus JSON overhead.
+  const maxLength = new URL(request.url).pathname === "/api/auth/me" ? 3 * 1024 * 1024 : 64 * 1024;
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
     length += value.byteLength;
-    if (length > (new URL(request.url).pathname === "/api/auth/me" ? 192 : 64) * 1024) { void reader.cancel(); throw new HttpError(413, "Request is too large."); }
+    if (length > maxLength) { void reader.cancel(); throw new HttpError(413, "Request is too large."); }
     chunks.push(value);
   }
   try { return JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown; }

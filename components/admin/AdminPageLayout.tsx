@@ -23,11 +23,13 @@ type CurrentAdmin = {
   username: string | null;
   email: string;
   role: UserRole;
+  profileImageUrl: string | null;
 };
 
 interface AdminPageLayoutProps {
   sectionTitle: string;
   children: ReactNode;
+  profile?: Pick<CurrentAdmin, "fullName" | "profileImageUrl">;
 
   // Keep this for existing dashboard compatibility
   isSuperAdmin?: boolean;
@@ -39,6 +41,7 @@ interface AdminPageLayoutProps {
 export default function AdminPageLayout({
   sectionTitle,
   children,
+  profile,
   adminAccountsOpen = false,
   onOpenAdminAccounts,
 }: AdminPageLayoutProps) {
@@ -166,10 +169,13 @@ export default function AdminPageLayout({
             sectionTitle
           }
           adminName={
-            currentAdmin.fullName
+            profile?.fullName ?? currentAdmin.fullName
           }
           adminRole={
             currentAdmin.role
+          }
+          adminImage={
+            profile ? profile.profileImageUrl : currentAdmin.profileImageUrl
           }
         />
 

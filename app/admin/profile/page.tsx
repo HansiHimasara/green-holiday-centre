@@ -24,21 +24,71 @@ const initialProfile: Profile = {
   fullName: "", username: "", email: "", phone: "", role: "", lastLogin: "", status: "Active", photo: null,
 };
 
+type ProfileUser = {
+  fullName: string;
+  username: string | null;
+  email: string;
+  phone: string | null;
+  role: string;
+  lastLoginAt: string | null;
+  profileImageUrl: string | null;
+};
+
+function toProfile(user: ProfileUser): Profile {
+  return {
+    fullName: user.fullName,
+    username: user.username || "",
+    email: user.email,
+    phone: user.phone || "",
+    role: user.role,
+    lastLogin: user.lastLoginAt || "",
+    status: "Active",
+    photo: user.profileImageUrl || null,
+  };
+}
+
+function readPhotoFile(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") resolve(reader.result);
+      else reject(new Error("Unable to read this photo."));
+    };
+    reader.onerror = () => reject(new Error("Unable to read this photo."));
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function AdminProfilePage() {
   const [profile, setProfile] = useState<Profile>(initialProfile);
   const [editingProfile, setEditingProfile] =
     useState<Profile>(initialProfile);
   const [isEditing, setIsEditing] = useState(false);
   const [message, setMessage] = useState("");
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [photoAction, setPhotoAction] = useState<"upload" | "remove" | null>(null);
+  const isBusy = isSaving || photoAction !== null;
 
   useEffect(() => {
-    void fetch("/api/auth/me", { cache: "no-store" }).then(async response => {
-      if (!response.ok) return;
-      const { user } = await response.json();
-      const loaded: Profile = { fullName: user.fullName, username: user.username || "", email: user.email,
-        phone: user.phone || "", role: user.role, lastLogin: user.lastLoginAt || "", status: "Active", photo: user.profileImageUrl || null };
-      setProfile(loaded); setEditingProfile(loaded);
-    });
+    let cancelled = false;
+    async function loadProfile() {
+      try {
+        const response = await fetch("/api/auth/me", { cache: "no-store" });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Unable to load your profile.");
+        if (!cancelled) {
+          const loaded = toProfile(data.user);
+          setProfile(loaded);
+          setEditingProfile(loaded);
+          setProfileLoaded(true);
+        }
+      } catch (error) {
+        if (!cancelled) setMessage(error instanceof Error ? error.message : "Unable to load your profile.");
+      }
+    }
+    void loadProfile();
+    return () => { cancelled = true; };
   }, []);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -68,11 +118,31 @@ export default function AdminProfilePage() {
       return;
     }
 
-    const response = await fetch("/api/auth/me", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(editingProfile) });
-    if (!response.ok) { setMessage((await response.json()).error || "Unable to save profile."); return; }
-    setProfile(editingProfile);
-    setIsEditing(false);
-    setMessage("Profile details updated successfully.");
+    setIsSaving(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/auth/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: editingProfile.fullName,
+          username: editingProfile.username,
+          email: editingProfile.email,
+          phone: editingProfile.phone,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to save profile.");
+      const saved = toProfile(data.user);
+      setProfile(saved);
+      setEditingProfile(saved);
+      setIsEditing(false);
+      setMessage("Profile details updated successfully.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to save profile.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleFieldChange = (
@@ -85,22 +155,56 @@ export default function AdminProfilePage() {
     }));
   };
 
-  const handlePhotoChange = (
+  const savePhoto = async (photo: string | null) => {
+    const response = await fetch("/api/auth/me", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ photo }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Unable to save your profile photo.");
+    const saved = toProfile(data.user);
+    setProfile(saved);
+    setEditingProfile((current) => ({ ...current, photo: saved.photo }));
+    setMessage(photo ? "Profile photo updated successfully." : "Profile photo removed successfully.");
+  };
+
+  const handlePhotoChange = async (
     event: ChangeEvent<HTMLInputElement>,
   ) => {
     const file = event.target.files?.[0];
+    // Let the user choose the same file again after a failed upload or removal.
+    event.target.value = "";
 
-    if (!file) {
+    if (!file || isBusy || !profileLoaded) {
       return;
     }
 
-    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > 96 * 1024) {
-      setMessage("Choose a PNG, JPEG or WebP photo no larger than 96 KB."); return;
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > 2 * 1024 * 1024) {
+      setMessage("Choose a PNG, JPEG or WebP photo no larger than 2 MB."); return;
     }
-    const reader = new FileReader();
-    reader.onload = () => { handleFieldChange("photo", String(reader.result)); setIsEditing(true); setMessage("Click Save Changes to save your photo."); };
-    reader.onerror = () => setMessage("Unable to read this photo.");
-    reader.readAsDataURL(file);
+    setPhotoAction("upload");
+    setMessage("");
+    try {
+      await savePhoto(await readPhotoFile(file));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to save your profile photo.");
+    } finally {
+      setPhotoAction(null);
+    }
+  };
+
+  const handleRemovePhoto = async () => {
+    if (isBusy || !profileLoaded || !profile.photo) return;
+    setPhotoAction("remove");
+    setMessage("");
+    try {
+      await savePhoto(null);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to remove your profile photo.");
+    } finally {
+      setPhotoAction(null);
+    }
   };
 
   const displayedProfile = isEditing
@@ -108,7 +212,10 @@ export default function AdminProfilePage() {
     : profile;
 
   return (
-    <AdminPageLayout sectionTitle="User Profile">
+    <AdminPageLayout
+      sectionTitle="User Profile"
+      profile={profileLoaded ? { fullName: profile.fullName, profileImageUrl: profile.photo } : undefined}
+    >
       <AdminPageHeader
         title="My Profile"
         description="Configure your account information and system profile."
@@ -160,14 +267,17 @@ export default function AdminProfilePage() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/png,image/jpeg,image/webp"
                 className="hidden"
                 onChange={handlePhotoChange}
+                disabled={isBusy || !profileLoaded}
+                aria-label="Choose your profile photo"
               />
 
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
+                disabled={isBusy || !profileLoaded}
                 className="
                   mt-4
                   rounded-lg
@@ -186,10 +296,27 @@ export default function AdminProfilePage() {
                   hover:border-[var(--green-primary)]
                   hover:bg-[var(--green-primary)]
                   hover:text-white
+                  disabled:cursor-not-allowed
+                  disabled:opacity-50
                 "
               >
-                Change Photo
+                {photoAction === "upload" ? "Saving Photo..." : displayedProfile.photo ? "Change Photo" : "Upload Photo"}
               </button>
+
+              {displayedProfile.photo && (
+                <button
+                  type="button"
+                  onClick={handleRemovePhoto}
+                  disabled={isBusy || !profileLoaded}
+                  className="mt-2 rounded-lg border border-red-200 bg-white px-4 py-2 text-[10px] font-extrabold uppercase tracking-[0.08em] text-red-600 transition-colors hover:border-red-400 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {photoAction === "remove" ? "Removing Photo..." : "Remove Photo"}
+                </button>
+              )}
+
+              <p className="mt-3 text-center text-[10px] text-[var(--text-secondary)]">
+                PNG, JPEG or WebP · Max 2 MB
+              </p>
             </div>
 
             {/* Profile Information */}
@@ -198,6 +325,7 @@ export default function AdminProfilePage() {
                 label="Full Name"
                 value={displayedProfile.fullName}
                 editing={isEditing}
+                disabled={isBusy}
                 inputClasses={inputClasses}
                 onChange={(value) =>
                   handleFieldChange("fullName", value)
@@ -208,6 +336,7 @@ export default function AdminProfilePage() {
                 label="Username"
                 value={displayedProfile.username}
                 editing={isEditing}
+                disabled={isBusy}
                 inputClasses={inputClasses}
                 onChange={(value) =>
                   handleFieldChange("username", value)
@@ -218,6 +347,7 @@ export default function AdminProfilePage() {
                 label="Email Address"
                 value={displayedProfile.email}
                 editing={isEditing}
+                disabled={isBusy}
                 inputClasses={inputClasses}
                 type="email"
                 onChange={(value) =>
@@ -229,6 +359,7 @@ export default function AdminProfilePage() {
                 label="Phone Number"
                 value={displayedProfile.phone}
                 editing={isEditing}
+                disabled={isBusy}
                 inputClasses={inputClasses}
                 onChange={(value) =>
                   handleFieldChange("phone", value)
@@ -262,6 +393,8 @@ export default function AdminProfilePage() {
           {/* Message */}
           {message && (
             <div
+              role="status"
+              aria-live="polite"
               className={`mt-6 rounded-lg border px-4 py-3 text-[12px] font-medium ${
                 message.includes("successfully")
                   ? "border-[var(--green-primary)]/20 bg-[var(--success-bg)] text-[var(--green-primary)]"
@@ -279,6 +412,7 @@ export default function AdminProfilePage() {
                 <button
                   type="button"
                   onClick={handleCancel}
+                  disabled={isBusy}
                   className="
                     rounded-lg
                     border
@@ -296,6 +430,8 @@ export default function AdminProfilePage() {
                     hover:border-gray-400
                     hover:bg-gray-50
                     hover:text-[var(--text-primary)]
+                    disabled:cursor-not-allowed
+                    disabled:opacity-50
                   "
                 >
                   Cancel
@@ -308,6 +444,7 @@ export default function AdminProfilePage() {
                 <button
                   type="button"
                   onClick={handleSave}
+                  disabled={isBusy}
                   className="
                     rounded-lg
                     border
@@ -324,14 +461,17 @@ export default function AdminProfilePage() {
                     duration-200
                     hover:border-[var(--green-dark)]
                     hover:bg-[var(--green-dark)]
+                    disabled:cursor-not-allowed
+                    disabled:opacity-50
                   "
                 >
-                  Save Changes
+                  {isSaving ? "Saving..." : "Save Changes"}
                 </button>
               ) : (
                 <button
                   type="button"
                   onClick={handleEdit}
+                  disabled={isBusy || !profileLoaded}
                   className="
                     rounded-lg
                     border
@@ -348,6 +488,8 @@ export default function AdminProfilePage() {
                     duration-200
                     hover:border-[var(--green-dark)]
                     hover:bg-[var(--green-dark)]
+                    disabled:cursor-not-allowed
+                    disabled:opacity-50
                   "
                 >
                   Edit Profile Details
@@ -365,6 +507,7 @@ function ProfileField({
   label,
   value,
   editing,
+  disabled,
   inputClasses,
   type = "text",
   onChange,
@@ -372,6 +515,7 @@ function ProfileField({
   label: string;
   value: string;
   editing: boolean;
+  disabled?: boolean;
   inputClasses: string;
   type?: string;
   onChange: (value: string) => void;
@@ -386,6 +530,7 @@ function ProfileField({
         <input
           type={type}
           value={value}
+          disabled={disabled}
           onChange={(event) => onChange(event.target.value)}
           className={`mt-2 ${inputClasses}`}
         />

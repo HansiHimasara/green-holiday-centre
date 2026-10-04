@@ -38,6 +38,43 @@ test("login issues HttpOnly cookie and admin can load protected data", async () 
   assert.equal((await call("/api/admin/users", "GET", undefined, adminCookie)).status, 403);
   assert.equal((await call("/api/admin/users", "GET", undefined, superCookie)).status, 200);
 });
+test("profile photos can be changed and removed without changing account details", async () => {
+  const before = (await (await call("/api/auth/me", "GET", undefined, adminCookie)).json()).user;
+  const other = (await (await call("/api/auth/me", "GET", undefined, superCookie)).json()).user;
+  assert.equal(before.phone, null);
+  const first = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAFElEQVR4nGPkzg5gwAaYsIoOWgkAn+cA1mOk0ssAAAAASUVORK5CYII=";
+  const second = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAFElEQVR4nGN8v9OGARtgwio6aCUAfiIB9J4MXhkAAAAASUVORK5CYII=";
+
+  assert.equal((await call("/api/auth/me", "PATCH", { photo: first })).status, 401);
+  assert.equal((await call("/api/auth/me", "PATCH", {}, adminCookie)).status, 400);
+  const upload = await call("/api/auth/me", "PATCH", { photo: first, id: other.id, role: "SUPER_ADMIN" }, adminCookie);
+  assert.equal(upload.status, 200);
+  const uploaded = (await upload.json()).user;
+  assert.equal(uploaded.profileImageUrl, first);
+  assert.equal(uploaded.id, before.id);
+  assert.equal(uploaded.role, "ADMIN");
+  assert.equal(uploaded.passwordHash, undefined);
+  for (const field of ["fullName", "username", "email", "phone"]) assert.equal(uploaded[field], before[field]);
+  assert.equal((await (await call("/api/auth/me", "GET", undefined, adminCookie)).json()).user.profileImageUrl, first);
+  assert.equal((await (await call("/api/auth/me", "GET", undefined, superCookie)).json()).user.profileImageUrl, other.profileImageUrl);
+
+  assert.equal((await call("/api/auth/me", "PATCH", { photo: null })).status, 401);
+  assert.equal((await call("/api/auth/me", "PATCH", { photo: null }, adminCookie, { origin: "https://attacker.example" })).status, 403);
+  assert.equal((await call("/api/auth/me", "PATCH", { photo: "data:image/png;base64," + Buffer.from("not-an-image-at-all").toString("base64") }, adminCookie)).status, 400);
+  assert.equal((await (await call("/api/auth/me", "GET", undefined, adminCookie)).json()).user.profileImageUrl, first);
+
+  const replacement = await call("/api/auth/me", "PATCH", { photo: second }, adminCookie);
+  assert.equal(replacement.status, 200);
+  assert.equal((await replacement.json()).user.profileImageUrl, second);
+  assert.equal((await (await call("/api/auth/me", "GET", undefined, adminCookie)).json()).user.profileImageUrl, second);
+
+  const removal = await call("/api/auth/me", "PATCH", { photo: null }, adminCookie);
+  assert.equal(removal.status, 200);
+  assert.equal((await removal.json()).user.profileImageUrl, null);
+  const removed = (await (await call("/api/auth/me", "GET", undefined, adminCookie)).json()).user;
+  assert.equal(removed.profileImageUrl, null);
+  for (const field of ["fullName", "username", "email", "phone"]) assert.equal(removed[field], before[field]);
+});
 test("profile PATCH cannot elevate roles or expose password hashes", async () => {
   const response = await call("/api/auth/me", "PATCH", { fullName: "Updated Admin", username: "testadmin", email: "admin@example.test", phone: "+94771234567", role: "SUPER_ADMIN" }, adminCookie);
   assert.equal(response.status, 200);
