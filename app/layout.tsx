@@ -1,17 +1,22 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Nunito_Sans } from "next/font/google";
+import localFont from "next/font/local";
 
 import "./globals.css";
 
-const nunito = Nunito_Sans({
-  subsets: ["latin"],
+const nunito = localFont({
+  src: "./fonts/NunitoSans.ttf",
   variable: "--font-nunito",
+  weight: "200 900",
+  style: "normal",
+  display: "swap",
 });
 
-const cormorant = Cormorant_Garamond({
-  subsets: ["latin"],
+const cormorant = localFont({
+  src: "./fonts/CormorantGaramond.ttf",
   variable: "--font-display",
-  weight: ["400", "500", "600"],
+  weight: "300 700",
+  style: "normal",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
