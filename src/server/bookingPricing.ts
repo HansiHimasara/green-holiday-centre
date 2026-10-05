@@ -1,3 +1,4 @@
+import { validAirportTransfer } from "../shared/airports";
 export class BookingPricingError extends Error {}
 
 export type BookingPricingServiceType =
@@ -411,6 +412,7 @@ export async function calculateBookingPrice({
   vehicleRatePerKm:
     number;
 }): Promise<BookingPriceResult> {
+  if (serviceType === "AIRPORT_TRANSFER" && !validAirportTransfer(pickupLocation, dropoffLocation)) throw new BookingPricingError("Select a Sri Lankan airport as your pickup or drop location, with a different other endpoint.");
   if (
     !pickupLocation.trim()
   ) {

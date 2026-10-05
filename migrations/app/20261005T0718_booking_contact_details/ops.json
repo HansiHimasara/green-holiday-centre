@@ -1,0 +1,170 @@
+[
+  {
+    "id": "column.public.booking.customerEmail",
+    "label": "Add column \"customerEmail\" to \"booking\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "customerEmail",
+        "table": "booking"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"customerEmail\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "booking",
+          "customerEmail"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"customerEmail\"",
+        "sql": "ALTER TABLE \"public\".\"booking\" ADD COLUMN \"customerEmail\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"customerEmail\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "booking",
+          "customerEmail"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.booking.customerName",
+    "label": "Add column \"customerName\" to \"booking\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "customerName",
+        "table": "booking"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"customerName\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "booking",
+          "customerName"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"customerName\"",
+        "sql": "ALTER TABLE \"public\".\"booking\" ADD COLUMN \"customerName\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"customerName\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "booking",
+          "customerName"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.booking.customerNationality",
+    "label": "Add column \"customerNationality\" to \"booking\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "customerNationality",
+        "table": "booking"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"customerNationality\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "booking",
+          "customerNationality"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"customerNationality\"",
+        "sql": "ALTER TABLE \"public\".\"booking\" ADD COLUMN \"customerNationality\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"customerNationality\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "booking",
+          "customerNationality"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.booking.customerPhone",
+    "label": "Add column \"customerPhone\" to \"booking\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "customerPhone",
+        "table": "booking"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"customerPhone\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "booking",
+          "customerPhone"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"customerPhone\"",
+        "sql": "ALTER TABLE \"public\".\"booking\" ADD COLUMN \"customerPhone\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"customerPhone\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "booking",
+          "customerPhone"
+        ]
+      }
+    ]
+  }
+]

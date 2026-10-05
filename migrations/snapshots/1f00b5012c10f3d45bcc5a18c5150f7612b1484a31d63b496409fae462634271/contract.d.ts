@@ -34,7 +34,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'66dbaa1688e43f90f4ef11cf9b62a87b013bbf62565b9a7ae56a6739f43e5b27'>;
+  StorageHashBase<'1f00b5012c10f3d45bcc5a18c5150f7612b1484a31d63b496409fae462634271'>;
 export type ExecutionHash =
   ExecutionHashBase<'4a2275a714614d4fb10c5905b72ddaef973f651a44f4e86f0e384bf22db79bde'>;
 export type ProfileHash =
@@ -247,10 +247,6 @@ export type FieldOutputTypes = {
       readonly bookingReference: CodecTypes['pg/text@1']['output'];
       readonly idempotencyKey: CodecTypes['pg/text@1']['output'] | null;
       readonly customerId: CodecTypes['pg/int4@1']['output'];
-      readonly customerName: CodecTypes['pg/text@1']['output'] | null;
-      readonly customerEmail: CodecTypes['pg/text@1']['output'] | null;
-      readonly customerPhone: CodecTypes['pg/text@1']['output'] | null;
-      readonly customerNationality: CodecTypes['pg/text@1']['output'] | null;
       readonly vehicleTypeId: CodecTypes['pg/int4@1']['output'];
       readonly serviceType: 'AIRPORT_TRANSFER' | 'DAY_TOUR' | 'ROUND_TOUR';
       readonly travelDate: CodecTypes['pg/date-string@1']['output'];
@@ -390,10 +386,6 @@ export type FieldInputTypes = {
       readonly bookingReference: CodecTypes['pg/text@1']['input'];
       readonly idempotencyKey: CodecTypes['pg/text@1']['input'] | null;
       readonly customerId: CodecTypes['pg/int4@1']['input'];
-      readonly customerName: CodecTypes['pg/text@1']['input'] | null;
-      readonly customerEmail: CodecTypes['pg/text@1']['input'] | null;
-      readonly customerPhone: CodecTypes['pg/text@1']['input'] | null;
-      readonly customerNationality: CodecTypes['pg/text@1']['input'] | null;
       readonly vehicleTypeId: CodecTypes['pg/int4@1']['input'];
       readonly serviceType: 'AIRPORT_TRANSFER' | 'DAY_TOUR' | 'ROUND_TOUR';
       readonly travelDate: CodecTypes['pg/date-string@1']['input'];
@@ -532,11 +524,7 @@ export type StorageColumnTypes = {
       readonly bookingReference: CodecTypes['pg/text@1']['output'];
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['output'];
       readonly currency: CodecTypes['pg/text@1']['output'];
-      readonly customerEmail: CodecTypes['pg/text@1']['output'] | null;
       readonly customerId: CodecTypes['pg/int4@1']['output'];
-      readonly customerName: CodecTypes['pg/text@1']['output'] | null;
-      readonly customerNationality: CodecTypes['pg/text@1']['output'] | null;
-      readonly customerPhone: CodecTypes['pg/text@1']['output'] | null;
       readonly dropoffLocation: CodecTypes['pg/text@1']['output'] | null;
       readonly flightNumber: CodecTypes['pg/text@1']['output'] | null;
       readonly id: CodecTypes['pg/int4@1']['output'];
@@ -675,11 +663,7 @@ export type StorageColumnInputTypes = {
       readonly bookingReference: CodecTypes['pg/text@1']['input'];
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
       readonly currency: CodecTypes['pg/text@1']['input'];
-      readonly customerEmail: CodecTypes['pg/text@1']['input'] | null;
       readonly customerId: CodecTypes['pg/int4@1']['input'];
-      readonly customerName: CodecTypes['pg/text@1']['input'] | null;
-      readonly customerNationality: CodecTypes['pg/text@1']['input'] | null;
-      readonly customerPhone: CodecTypes['pg/text@1']['input'] | null;
       readonly dropoffLocation: CodecTypes['pg/text@1']['input'] | null;
       readonly flightNumber: CodecTypes['pg/text@1']['input'] | null;
       readonly id: CodecTypes['pg/int4@1']['input'];
@@ -889,10 +873,6 @@ export namespace Models {
     bookingReference: CodecTypes['pg/text@1']['output'];
     idempotencyKey: CodecTypes['pg/text@1']['output'] | null;
     customerId: CodecTypes['pg/int4@1']['output'];
-    customerName: CodecTypes['pg/text@1']['output'] | null;
-    customerEmail: CodecTypes['pg/text@1']['output'] | null;
-    customerPhone: CodecTypes['pg/text@1']['output'] | null;
-    customerNationality: CodecTypes['pg/text@1']['output'] | null;
     vehicleTypeId: CodecTypes['pg/int4@1']['output'];
     serviceType: 'AIRPORT_TRANSFER' | 'DAY_TOUR' | 'ROUND_TOUR';
     travelDate: CodecTypes['pg/date-string@1']['output'];
@@ -1041,26 +1021,6 @@ type ContractBase = Omit<
                   readonly nativeType: 'int4';
                   readonly codecId: 'pg/int4@1';
                   readonly nullable: false;
-                };
-                readonly customerName: {
-                  readonly nativeType: 'text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: true;
-                };
-                readonly customerEmail: {
-                  readonly nativeType: 'text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: true;
-                };
-                readonly customerPhone: {
-                  readonly nativeType: 'text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: true;
-                };
-                readonly customerNationality: {
-                  readonly nativeType: 'text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: true;
                 };
                 readonly vehicleTypeId: {
                   readonly nativeType: 'int4';
@@ -2054,22 +2014,6 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
               };
-              readonly customerName: {
-                readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly customerEmail: {
-                readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly customerPhone: {
-                readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly customerNationality: {
-                readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
               readonly vehicleTypeId: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
@@ -2213,10 +2157,6 @@ type ContractBase = Omit<
                 readonly bookingReference: { readonly column: 'bookingReference' };
                 readonly idempotencyKey: { readonly column: 'idempotencyKey' };
                 readonly customerId: { readonly column: 'customerId' };
-                readonly customerName: { readonly column: 'customerName' };
-                readonly customerEmail: { readonly column: 'customerEmail' };
-                readonly customerPhone: { readonly column: 'customerPhone' };
-                readonly customerNationality: { readonly column: 'customerNationality' };
                 readonly vehicleTypeId: { readonly column: 'vehicleTypeId' };
                 readonly serviceType: { readonly column: 'serviceType' };
                 readonly travelDate: { readonly column: 'travelDate' };
