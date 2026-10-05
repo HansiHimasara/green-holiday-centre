@@ -59,6 +59,8 @@ export default function CustomerDetailsPage() {
       "AIRPORT_TRANSFER"
     );
 
+  const [nationality, setNationality] = useState("");
+
   /* =======================================================
      LOAD SAVED CUSTOMER DETAILS
   ======================================================= */
@@ -78,6 +80,7 @@ export default function CustomerDetailsPage() {
       return;
     }
 
+    setNationality(draft.customer.nationality ?? "");
     setFullName(
       draft.customer.fullName ??
         ""
@@ -138,6 +141,7 @@ export default function CustomerDetailsPage() {
   ======================================================= */
 
   function handleContinue() {
+    if (!nationality.trim() || nationality.trim().length > 100) { window.alert("Please enter your nationality (up to 100 characters)."); return; }
     const normalizedFullName =
       fullName.trim();
 
@@ -221,6 +225,7 @@ export default function CustomerDetailsPage() {
 
     saveBookingDraft({
       customer: {
+        nationality: nationality.trim(),
         fullName:
           normalizedFullName,
 
@@ -356,6 +361,8 @@ export default function CustomerDetailsPage() {
             {/* ====================================
                 SPECIAL REQUESTS - OPTIONAL
             ==================================== */}
+
+            <Input label="Nationality" placeholder="e.g. Sri Lankan" value={nationality} maxLength={100} required onChange={event => setNationality(event.target.value)} />
 
             <Textarea
               label="Special Requests / Notes About Your Requirements"

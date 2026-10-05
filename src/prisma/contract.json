@@ -210,10 +210,38 @@
                   "kind": "scalar"
                 }
               },
+              "customerEmail": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
               "customerId": {
                 "nullable": false,
                 "type": {
                   "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "customerName": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "customerNationality": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "customerPhone": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
                   "kind": "scalar"
                 }
               },
@@ -235,6 +263,13 @@
                 "nullable": false,
                 "type": {
                   "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "idempotencyKey": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
                   "kind": "scalar"
                 }
               },
@@ -439,8 +474,20 @@
                 "currency": {
                   "column": "currency"
                 },
+                "customerEmail": {
+                  "column": "customerEmail"
+                },
                 "customerId": {
                   "column": "customerId"
+                },
+                "customerName": {
+                  "column": "customerName"
+                },
+                "customerNationality": {
+                  "column": "customerNationality"
+                },
+                "customerPhone": {
+                  "column": "customerPhone"
                 },
                 "dropoffLocation": {
                   "column": "dropoffLocation"
@@ -450,6 +497,9 @@
                 },
                 "id": {
                   "column": "id"
+                },
+                "idempotencyKey": {
+                  "column": "idempotencyKey"
                 },
                 "luggageCount": {
                   "column": "luggageCount"
@@ -1791,10 +1841,30 @@
                   "nativeType": "text",
                   "nullable": false
                 },
+                "customerEmail": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
                 "customerId": {
                   "codecId": "pg/int4@1",
                   "nativeType": "int4",
                   "nullable": false
+                },
+                "customerName": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "customerNationality": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "customerPhone": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
                 },
                 "dropoffLocation": {
                   "codecId": "pg/text@1",
@@ -1814,6 +1884,11 @@
                   },
                   "nativeType": "int4",
                   "nullable": false
+                },
+                "idempotencyKey": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
                 },
                 "luggageCount": {
                   "codecId": "pg/int4@1",
@@ -1972,6 +2047,11 @@
                 {
                   "columns": [
                     "bookingReference"
+                  ]
+                },
+                {
+                  "columns": [
+                    "idempotencyKey"
                   ]
                 }
               ]
@@ -3030,7 +3110,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "338e3b0eb347812714f2b5a02870a37ad22ecbb6da5f3a36cb5eccbd69ab19b9"
+    "storageHash": "66dbaa1688e43f90f4ef11cf9b62a87b013bbf62565b9a7ae56a6739f43e5b27"
   },
   "execution": {
     "executionHash": "4a2275a714614d4fb10c5905b72ddaef973f651a44f4e86f0e384bf22db79bde",

@@ -1,0 +1,86 @@
+[
+  {
+    "id": "column.public.booking.idempotencyKey",
+    "label": "Add column \"idempotencyKey\" to \"booking\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "idempotencyKey",
+        "table": "booking"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"idempotencyKey\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "booking",
+          "idempotencyKey"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"idempotencyKey\"",
+        "sql": "ALTER TABLE \"public\".\"booking\" ADD COLUMN \"idempotencyKey\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"idempotencyKey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "booking",
+          "idempotencyKey"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.booking.booking_idempotencyKey_key",
+    "label": "Add unique constraint on \"booking\" (idempotencyKey)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "booking_idempotencyKey_key",
+        "table": "booking"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"booking_idempotencyKey_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "booking_idempotencyKey_key",
+          "public",
+          "\"public\".\"booking\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"booking_idempotencyKey_key\"",
+        "sql": "ALTER TABLE \"public\".\"booking\" ADD CONSTRAINT \"booking_idempotencyKey_key\" UNIQUE (\"idempotencyKey\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"booking_idempotencyKey_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "booking_idempotencyKey_key",
+          "public",
+          "\"public\".\"booking\""
+        ]
+      }
+    ]
+  }
+]

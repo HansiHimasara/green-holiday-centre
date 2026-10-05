@@ -100,7 +100,7 @@ async function handlePOST(request: Request) {
 
     return NextResponse.json(
       {
-        message: "Thank you! Your feedback has been submitted.",
+        message: "Thank you! Your feedback is awaiting administrator approval before publication.",
         feedback: { id: feedback.id },
       },
       { status: 201 }

@@ -1,606 +1,337 @@
 "use client";
 
-import { apiFetch as fetch } from "@/src/client/apiFetch";
-
-import {
-  useEffect,
-  useState,
-} from "react";
-
-
+import { useEffect, useState } from "react";
+import Link from "next/link";
 
 import BookingPageShell from "@/components/bookings/BookingPageShell";
-import BookingStepHeader from "@/components/bookings/BookingStepHeader";
-import ServiceTabs from "@/components/bookings/ServiceTabs";
-
+import SummaryRow from "@/components/bookings/SummaryRow";
 import Button from "@/components/ui/Button";
 
-import {
-  getBookingDraft,
+type Booking = {
+  bookingReference: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  customerNationality: string;
+  serviceType: string;
+  vehicleName?: string;
+  travelDate: string;
+  totalAmount: number;
+  currency: string;
+  status: string;
+  paymentStatus: string;
+};
 
-  type BookingDraft,
-} from "@/src/client/bookingDraft";
-
-function formatTravelDate(
-  value?: string
-) {
-  if (!value) {
-    return "Not provided";
-  }
-
-  const date =
-    new Date(
-      `${value}T00:00:00`
-    );
-
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
-    return value;
-  }
-
-  return date.toLocaleDateString(
-    "en-GB",
-    {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    }
-  );
-}
-
-function shortLocation(
-  value?: string
-) {
-  if (!value) {
-    return "";
-  }
-
-  return (
-    value
-      .split(",")[0]
-      ?.trim() ||
-    value.trim()
-  );
-}
-
-function serviceName(
-  booking: BookingDraft
-) {
-  if (
-    booking.serviceType ===
-    "AIRPORT_TRANSFER"
-  ) {
-    return "Airport Transfer";
-  }
-
-  if (
-    booking.serviceType ===
-    "DAY_TOUR"
-  ) {
-    return "Day Tour";
-  }
-
-  if (
-    booking.serviceType ===
-    "ROUND_TOUR"
-  ) {
-    if (
-      booking.numberOfNights &&
-      booking.numberOfNights >
-        0
-    ) {
-      return `Round Tour — ${booking.numberOfNights} ${
-        booking.numberOfNights ===
-        1
-          ? "Night"
-          : "Nights"
-      }`;
-    }
-
-    return "Round Tour";
-  }
-
-  return "Not provided";
-}
-
-function createPlannedRoute(
-  booking: BookingDraft
-) {
-  const pickup =
-    shortLocation(
-      booking.pickupLocation
-    );
-
-  const drop =
-    shortLocation(
-      booking.dropoffLocation
-    );
-
-  const destinations =
-    (
-      booking.destinations ??
-      []
-    )
-      .map(
-        (location) =>
-          shortLocation(
-            location
-          )
-      )
-      .filter(Boolean);
-
-  if (
-    booking.serviceType ===
-    "AIRPORT_TRANSFER"
-  ) {
-    return [
-      pickup,
-      drop,
-    ].filter(Boolean);
-  }
-
-  if (
-    booking.serviceType ===
-    "DAY_TOUR"
-  ) {
-    return [
-      pickup,
-      ...destinations,
-      drop,
-    ].filter(Boolean);
-  }
-
-  if (
-    booking.serviceType ===
-    "ROUND_TOUR"
-  ) {
-    return [
-      pickup,
-      ...destinations,
-      drop,
-    ].filter(Boolean);
-  }
-
-  return [];
-}
-
-function money(
-  amount?: number,
-  currency?: string
-) {
-  if (
-    typeof amount !==
-      "number" ||
-    !Number.isFinite(
-      amount
-    ) ||
-    !currency
-  ) {
-    return "Calculating...";
-  }
-
-  return `${currency} ${amount.toLocaleString(
-    "en-LK",
-    {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }
-  )}`;
+function label(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
 export default function BookingConfirmationPage() {
-  const [booking, setBooking] = useState<BookingDraft>({});
-  const [loaded, setLoaded] = useState(false);
+  const [booking, setBooking] = useState<Booking | null>(null);
   const [error, setError] = useState("");
-  const [emailSent, setEmailSent] = useState<boolean | undefined>();
+
   useEffect(() => {
-    let cancelled = false;
-    const saved = getBookingDraft();
+    const controller = new AbortController();
     const params = new URLSearchParams(window.location.search);
-    const id = params.get("booking") || saved.bookingId;
-    const token = params.get("token") || saved.confirmationToken;
+
+    const id = params.get("booking");
+    const token = params.get("token");
+
     async function load() {
       try {
-        if (!id || !token) throw new Error("No saved reservation was found. Please complete your booking first.");
-        const response = await fetch(`/api/booking-confirmation?booking=${encodeURIComponent(id)}&token=${encodeURIComponent(token)}`, { cache: "no-store" });
+        const query = new URLSearchParams({
+          booking: id || "",
+          token: token || "",
+        });
+
+        const response = await fetch(
+          `/api/booking-confirmation?${query}`,
+          {
+            cache: "no-store",
+            signal: controller.signal,
+          },
+        );
+
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Unable to load your reservation.");
-        if (!cancelled) {
-          setBooking(data.booking);
-          if (String(saved.bookingId) === String(id)) setEmailSent(saved.emailSent);
+
+        if (!response.ok || !data.booking) {
+          throw new Error(
+            data.error || "Unable to load your booking.",
+          );
         }
-      } catch (reason) {
-        if (!cancelled) setError(reason instanceof Error ? reason.message : "Unable to load your reservation.");
-      } finally { if (!cancelled) setLoaded(true); }
+
+        if (!controller.signal.aborted) {
+          setBooking(data.booking);
+        }
+      } catch (err) {
+        if (!controller.signal.aborted) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Unable to load your booking.",
+          );
+        }
+      }
     }
+
     void load();
-    return () => { cancelled = true; };
+
+    return () => controller.abort();
   }, []);
-  if (!loaded || error) return <BookingPageShell>
-    <section className="flex min-h-[500px] flex-col items-center justify-center gap-5 bg-[#F8F7F1] px-6">
-      <p role={error ? "alert" : "status"} className="text-sm text-[var(--text-secondary)]">{error || "Loading your reservation..."}</p>
-      {error && <Button href="/customer/booking/summary" variant="outline">Back to Booking</Button>}
-    </section>
-  </BookingPageShell>;
 
-  /* ==========================================
-     SERVICE TAB
-  ========================================== */
-
-  const serviceTab:
-    | "airport-transfer"
-    | "day-tour"
-    | "round-tour" =
-    booking.serviceType ===
-    "DAY_TOUR"
-      ? "day-tour"
-      : booking.serviceType ===
-          "ROUND_TOUR"
-        ? "round-tour"
-        : "airport-transfer";
-
-  const plannedRoute =
-    createPlannedRoute(
-      booking
-    );
-
-  const summaryItems = [
-    { label: "Booking Reference", value: booking.bookingReference || "—" },
-    { label: "Payment Status", value: booking.paymentStatus || "UNPAID" },
-    {
-      label: "Tour Type",
-
-      value:
-        serviceName(
-          booking
-        ),
-    },
-
-    {
-      label:
-        "Selected Vehicle",
-
-      value:
-        booking.vehicleName ||
-        "Not provided",
-    },
-
-    {
-      label:
-        "Travel Date",
-
-      value:
-        formatTravelDate(
-          booking.travelDate
-        ),
-    },
-
-    {
-      label:
-        "Total Passengers",
-
-      value:
-        typeof booking.passengerCount ===
-        "number"
-          ? `${booking.passengerCount} ${
-              booking.passengerCount ===
-              1
-                ? "Passenger"
-                : "Passengers"
-            }`
-          : "Not provided",
-    },
-
-    {
-      label:
-        "Luggage Requirement",
-
-      value:
-        typeof booking.luggageCount ===
-        "number"
-          ? `${booking.luggageCount} ${
-              booking.luggageCount ===
-              1
-                ? "Bag"
-                : "Bags"
-            }`
-          : "Not provided",
-    },
-  ];
+  const heading = !booking
+    ? ""
+    : ({
+        PENDING: "Booking Received!",
+        CONFIRMED: "Booking Confirmed!",
+        CANCELLED: "Booking Cancelled",
+        COMPLETED: "Booking Completed!",
+      }[booking.status] ?? "Booking Details");
 
   return (
     <BookingPageShell>
-      {/* TOP */}
+      {/* PAGE HEADER */}
+      <section className="bg-white">
+        <div className="mx-auto w-full max-w-[1180px] px-8 pt-8 md:px-10">
+          <div className="flex items-center justify-between gap-8 border-b border-[var(--border-light)] pb-6">
+            <div>
+              <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-[var(--green-primary)]">
+                Almost Complete
+              </p>
 
-      <section className="relative overflow-hidden bg-white">
-        <div className="relative z-10">
+              <h1 className="mt-1 font-[var(--font-display)] text-[36px] font-semibold leading-tight text-[var(--green-dark)]">
+                Booking Confirmation
+              </h1>
+            </div>
 
-          <div className="mx-auto w-full max-w-[1280px] px-6 pt-7 md:px-10">
-            <ServiceTabs
-              active={
-                serviceTab
-              }
-            />
-          </div>
+            {/* STEP INDICATOR */}
+            <div className="shrink-0">
+              <div
+                className="flex items-center gap-3"
+                aria-label="Step 4 of 4"
+              >
+                <span className="text-[13px] font-bold text-[var(--green-primary)]">
+                  Step 4 of 4
+                </span>
 
-          <div className="mt-10 border-b border-[var(--border-light)]">
-            <div className="mx-auto w-full max-w-[1280px] px-6 pb-6 md:px-10">
-
-              <BookingStepHeader
-                title="Booking Confirmation"
-                step={4}
-                totalSteps={4}
-              />
-
+                <div
+                  className="flex items-center gap-1"
+                  aria-hidden="true"
+                >
+                  {[1, 2, 3, 4].map((step) => (
+                    <span
+                      key={step}
+                      className="h-[5px] w-5 rounded-full bg-[var(--green-primary)]"
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
-
         </div>
       </section>
 
-      {/* SUMMARY */}
+      {/* CONFIRMATION CONTENT */}
+      <section className="bg-[#F8F7F1] py-9 md:py-10">
+        <div className="mx-auto w-full max-w-[760px] px-6 md:px-0">
+          {!booking ? (
+            <div
+              className="text-center"
+              role={error ? "alert" : "status"}
+            >
+              <p className="text-[13px] text-[var(--text-secondary)]">
+                {error || "Loading your booking…"}
+              </p>
 
-      <section className="bg-[#F8F7F1] py-10">
-        <div className="mx-auto w-full max-w-[1280px] px-6 md:px-10">
+              {error && (
+                <Link
+                  href="/customer/contact"
+                  className="mt-4 inline-block text-[var(--green-primary)]"
+                >
+                  Contact us
+                </Link>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* BOOKING STATUS */}
+              <div className="text-center">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--green-primary)] text-[24px] font-bold text-white shadow-[0_6px_18px_rgba(67,150,70,0.20)]">
+                  {booking.status === "CANCELLED" ? "×" : "✓"}
+                </div>
 
-          <div className="overflow-hidden rounded-2xl border border-[var(--border-light)] bg-white shadow-[0_15px_45px_rgba(7,91,69,0.08)]">
+                <br />
 
-            {/* HEADER */}
-
-            <div className="relative overflow-hidden bg-[var(--green-deep)] px-6 py-6 md:px-8">
-
-              <div className="absolute -right-8 -top-12 h-32 w-32 rounded-full bg-[var(--yellow-golden)]/20" />
-
-              <div className="absolute -bottom-16 right-20 h-36 w-36 rounded-full bg-[var(--sky-blue)]/15" />
-
-              <div className="relative z-10">
-
-                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/80">
-                  Your Journey
-                </p>
-
-                <h2 className="mt-2 font-serif text-[24px] font-semibold !text-white">
-                  {booking.status === "CANCELLED" ? "Reservation Cancelled" : "Reservation Received"}
+                <h2 className="mt-4 font-[var(--font-display)] text-[28px] font-semibold text-[var(--green-dark)]">
+                  {heading}
                 </h2>
 
-                <p className="mt-1 text-[13px] text-white/70">
-                  Reference: {booking.bookingReference}. Booking status: {booking.status}. Payment status: {booking.paymentStatus}.
+                <p className="mt-1 text-[13px] text-[var(--text-secondary)]">
+                  Thank you for choosing Green Holiday.
                 </p>
-
               </div>
 
-              <div className="relative z-10 mt-5 flex gap-2">
+              {/* CONFIRMATION CARD */}
+              <div className="mt-6 overflow-hidden rounded-2xl border border-[var(--border-light)] bg-white shadow-[0_15px_40px_rgba(7,91,69,0.08)]">
+                {/* CARD HEADER */}
+                <div className="bg-[var(--green-dark)] px-6 py-5 md:px-7">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--yellow-golden)]">
+                        Reservation Details
+                      </p>
 
-                <span className="h-1.5 w-10 rounded-full bg-[var(--green-light)]" />
-
-                <span className="h-1.5 w-6 rounded-full bg-[var(--yellow-golden)]" />
-
-                <span className="h-1.5 w-8 rounded-full bg-[var(--sky-blue)]" />
-
-              </div>
-
-            </div>
-
-            {/* CONTENT */}
-
-            <div className="p-6 md:p-8">
-
-              {/* DETAILS */}
-
-              <div className="overflow-hidden rounded-xl border border-[var(--green-primary)]/15">
-
-                {summaryItems.map(
-                  (
-                    item,
-                    index
-                  ) => (
-                    <div
-                      key={
-                        item.label
-                      }
-                      className={`
-                        px-5
-                        py-4
-                        sm:grid
-                        sm:grid-cols-[220px_1fr]
-                        sm:items-center
-                        sm:gap-6
-
-                        ${
-                          index !==
-                          summaryItems.length -
-                            1
-                            ? "border-b border-[var(--border-light)]"
-                            : ""
-                        }
-
-                        ${
-                          index %
-                            2 ===
-                          0
-                            ? "bg-[var(--green-primary)]/[0.025]"
-                            : "bg-white"
-                        }
-                      `}
-                    >
-
-                      <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--green-dark)]">
-                        {
-                          item.label
-                        }
-                      </span>
-
-                      <span className="text-[14px] font-semibold text-[var(--text-primary)]">
-                        {
-                          item.value
-                        }
-                      </span>
-
+                      <h3 className="mt-1 font-[var(--font-display)] text-[23px] font-semibold !text-white">
+                        {booking.bookingReference}
+                      </h3>
                     </div>
-                  )
-                )}
 
-              </div>
-
-              {/* PLANNED ROUTE */}
-
-              <div className="mt-7">
-
-                <h3 className="mb-4 text-[16px] font-bold text-[var(--green-dark)]">
-                  Planned Route
-                </h3>
-
-                <div className="overflow-hidden rounded-xl border border-[var(--border-light)] bg-white">
-
-                  {plannedRoute.map(
-                    (
-                      location,
-                      index
-                    ) => {
-                      const first =
-                        index === 0;
-
-                      const last =
-                        index ===
-                        plannedRoute.length -
-                          1;
-
-                      let label =
-                        `Stop ${index}`;
-
-                      if (first) {
-                        label =
-                          "Pickup";
-                      } else if (last) {
-                        label =
-                          "Final Drop";
-                      } else if (
-                        booking.serviceType ===
-                        "DAY_TOUR"
-                      ) {
-                        label =
-                          "Tour Destination";
-                      } else if (
-                        booking.serviceType ===
-                        "ROUND_TOUR"
-                      ) {
-                        label =
-                          `Night ${index} Destination`;
-                      }
-
-                      return (
-                        <div
-                          key={`${location}-${index}`}
-                          className="flex gap-4 border-b border-[var(--border-light)] px-5 py-4 last:border-b-0"
-                        >
-
-                          <div className="flex w-4 justify-center">
-
-                            <span
-                              className={`
-                                mt-1
-                                h-3
-                                w-3
-                                rounded-full
-
-                                ${
-                                  first
-                                    ? "bg-[var(--green-primary)]"
-                                    : last
-                                      ? "bg-[var(--yellow-golden)]"
-                                      : "bg-[var(--sky-blue)]"
-                                }
-                              `}
-                            />
-
-                          </div>
-
-                          <div>
-
-                            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
-                              {
-                                label
-                              }
-                            </p>
-
-                            <p className="mt-1 text-[14px] font-semibold text-[var(--text-primary)]">
-                              {
-                                location
-                              }
-                            </p>
-
-                          </div>
-
-                        </div>
-                      );
-                    }
-                  )}
-
+                    <span className="rounded-full bg-[var(--yellow-golden)] px-3 py-1.5 text-[9px] font-extrabold uppercase tracking-[0.08em] text-[var(--green-dark)]">
+                      {label(booking.status)}
+                    </span>
+                  </div>
                 </div>
 
-              </div>
+                {/* DETAILS */}
+                <div className="px-6 py-6 md:px-7">
+                  <div className="space-y-3.5">
+                    <SummaryRow
+                      label="Customer Name"
+                      value={booking.customerName}
+                    />
 
-              {/*
-                NO CALCULATED DISTANCE IS DISPLAYED.
+                    <SummaryRow
+                      label="Email Address"
+                      value={booking.customerEmail || "Not provided"}
+                    />
 
-                The backend still calculates it
-                because it is needed for pricing.
+                    <SummaryRow
+                      label="Phone Number"
+                      value={booking.customerPhone || "Not provided"}
+                    />
 
-                This also satisfies your Round Tour
-                requirement.
-              */}
+                    <SummaryRow
+                      label="Nationality"
+                      value={
+                        booking.customerNationality || "Not provided"
+                      }
+                    />
 
-              {/* TOTAL PRICE */}
+                    <SummaryRow
+                      label="Service"
+                      value={label(booking.serviceType)}
+                    />
 
-              <div className="relative mt-7 overflow-hidden rounded-xl border border-[var(--yellow-golden)]/40 bg-[var(--yellow-warm)]/[0.13] px-5 py-5 md:px-6">
+                    <SummaryRow
+                      label="Vehicle"
+                      value={
+                        booking.vehicleName || "Vehicle unavailable"
+                      }
+                    />
 
-                <div className="relative z-10 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-
-                  <div>
-
-                    <p className="text-[13px] font-bold text-[var(--green-dark)]">
-                      Total
-                      Transportation
-                      Cost
-                    </p>
-
-                    <p className="mt-1 text-[12px] text-[var(--text-secondary)]">
-
-                      Saved reservation total. Online payment is not available yet.
-
-                    </p>
-
+                    <SummaryRow
+                      label="Travel Date"
+                      value={new Intl.DateTimeFormat("en-GB", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                        timeZone: "Asia/Colombo",
+                      }).format(new Date(booking.travelDate))}
+                    />
                   </div>
 
-                  <span className="font-serif text-[26px] font-bold text-[var(--green-dark)]">
+                  {/* AMOUNT */}
+                  <div className="mt-5 rounded-xl border border-[var(--yellow-golden)]/35 bg-[var(--yellow-warm)]/[0.10] px-5 py-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-[var(--green-dark)]">
+                          {booking.paymentStatus === "PAID"
+                            ? "Amount Paid"
+                            : "Total Amount"}
+                        </p>
 
-                    {money(booking.totalAmount, booking.currency)}
+                        <p className="mt-0.5 text-[11px] text-[var(--text-secondary)]">
+                          Transportation cost · Payment:{" "}
+                          {label(booking.paymentStatus)}
+                        </p>
+                      </div>
 
-                  </span>
+                      <div className="flex items-baseline gap-1">
+                        <span className="font-serif text-[24px] font-bold text-[var(--green-dark)]">
+                          {new Intl.NumberFormat("en-US", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          }).format(booking.totalAmount)}
+                        </span>
 
+                        <span className="text-[10px] font-bold text-[var(--sky-blue)]">
+                          {booking.currency}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* BOOKING REFERENCE NOTICE */}
+                  <div className="mt-4 rounded-lg border border-[var(--sky-blue)]/20 bg-[var(--sky-blue)]/[0.04] px-4 py-3">
+                    <p className="text-[11px] leading-5 text-[var(--text-secondary)]">
+                      Please keep your booking reference{" "}
+                      <span className="font-bold text-[var(--green-dark)]">
+                        {booking.bookingReference}
+                      </span>{" "}
+                      for future communication.
+                    </p>
+                  </div>
                 </div>
-
               </div>
 
-              <p role="status" className="mt-6 rounded-lg border border-[var(--border-light)] bg-[var(--surface-soft)] px-4 py-4 text-[12px]">
-                {booking.paymentStatus === "PAID" ? "Payment received." : "No payment has been collected online. Please contact Green Holiday Centre to arrange payment and final travel confirmation."}
-                {emailSent === true ? " Reservation details have been emailed to you." : emailSent === false ? " Email delivery was not confirmed. Please keep your booking reference." : ""}
+              {/* ACTION BUTTONS */}
+              <div className="mt-5 flex flex-wrap justify-center gap-3">
+                <Button
+                  href="/"
+                  className="
+                    min-w-[140px]
+                    !bg-[var(--green-dark)]
+                    !text-white
+                    hover:!bg-[var(--green-forest)]
+                  "
+                >
+                  Back to Home
+                </Button>
+
+                <Button
+                  href="/customer/feedback"
+                  variant="outline"
+                  className="
+                    min-w-[140px]
+                    !border-[var(--green-primary)]
+                    !text-[var(--green-dark)]
+                    hover:!bg-[var(--green-primary)]
+                    hover:!text-white
+                  "
+                >
+                  Give Your Feedback
+                </Button>
+              </div>
+
+              {/* CONTACT */}
+              <br />
+
+              <p className="mt-4 text-center text-[11px] text-[var(--text-muted)]">
+                Need help with your booking?{" "}
+                <Link
+                  href="/customer/contact"
+                  className="font-semibold text-[var(--green-primary)] hover:text-[var(--green-dark)] hover:underline"
+                >
+                  Contact us
+                </Link>
               </p>
-              <div className="mt-7 flex items-center justify-between">
-                <Button href="/" variant="outline">Back to Home</Button>
-                <Button onClick={() => window.print()} className="min-w-[190px] !bg-[var(--green-primary)] !text-white">Print Reservation</Button>
-              </div>
-
-            </div>
-
-          </div>
-
+            </>
+          )}
         </div>
       </section>
-
     </BookingPageShell>
   );
 }

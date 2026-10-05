@@ -1,9 +1,5 @@
 // use prisma-8
 
-// ======================================================
-// ENUMS
-// ======================================================
-
 enum UserRole {
   @@type("pg/text@1")
 
@@ -67,12 +63,6 @@ enum ContactStatus {
   REPLIED = "REPLIED"
 }
 
-
-// ======================================================
-// ADMIN / SUPER ADMIN
-// Customer login ekak naha
-// ======================================================
-
 model User {
   id              Int        @id @default(autoincrement())
 
@@ -95,12 +85,6 @@ model User {
   updatedAt       temporal.updatedAtString()
 }
 
-
-// ======================================================
-// LOGIN SESSION
-// Browser cookie token eke hash eka witharai DB eke thiyenne
-// ======================================================
-
 model Session {
   id        Int    @id @default(autoincrement())
   userId    Int
@@ -116,11 +100,6 @@ model Session {
 
   createdAt TimestamptzString @default(now())
 }
-
-
-// ======================================================
-// FORGOT PASSWORD
-// ======================================================
 
 model PasswordResetToken {
   id        Int    @id @default(autoincrement())
@@ -138,12 +117,6 @@ model PasswordResetToken {
 
   createdAt TimestamptzString @default(now())
 }
-
-
-// ======================================================
-// CUSTOMERS
-// Customer account/login ekak naha
-// ======================================================
 
 model Customer {
   id                  Int    @id @default(autoincrement())
@@ -164,14 +137,6 @@ model Customer {
   updatedAt           temporal.updatedAtString()
 }
 
-
-// ======================================================
-// VEHICLE TYPES
-//
-// Me project eke actual individual vehicles stock track
-// karanne naha. Vehicle class/type witharai.
-// ======================================================
-
 model VehicleType {
   id                  Int           @id @default(autoincrement())
 
@@ -180,8 +145,6 @@ model VehicleType {
 
   passengerCapacity   Int
   luggageCapacity     Int
-
-  // LKR charged per kilometre
   ratePerKm           Int           @default(0)
 
   transmission        String?
@@ -191,7 +154,6 @@ model VehicleType {
   chauffeurLanguage   String?
 
   imageUrl            String?
-
   status              VehicleStatus @default(ACTIVE)
 
   bookings            Booking[]
@@ -200,41 +162,38 @@ model VehicleType {
   updatedAt           temporal.updatedAtString()
 }
 
-
-// ======================================================
-// BOOKINGS
-//
-// AIRPORT_TRANSFER / DAY_TOUR / ROUND_TOUR
-// thunama ekama table eken.
-// ======================================================
-
 model Booking {
-  id               Int           @id @default(autoincrement())
+  id                  Int           @id @default(autoincrement())
 
-  bookingReference String        @unique
+  bookingReference    String        @unique
+  idempotencyKey      String?       @unique
 
-  customerId       Int
-  vehicleTypeId    Int
+  customerId          Int
+  customerName        String?
+  customerEmail       String?
+  customerPhone       String?
+  customerNationality String?
 
-  serviceType      ServiceType
+  vehicleTypeId       Int
+  serviceType         ServiceType
 
-  travelDate       DateString
-  returnDate       DateString?
+  travelDate          DateString
+  returnDate          DateString?
 
-  passengerCount   Int
-  luggageCount     Int           @default(0)
-  numberOfNights   Int?
+  passengerCount      Int
+  luggageCount        Int           @default(0)
+  numberOfNights      Int?
 
-  pickupLocation   String?
-  dropoffLocation  String?
-  flightNumber     String?
-  specialRequests  String?
+  pickupLocation      String?
+  dropoffLocation     String?
+  flightNumber        String?
+  specialRequests     String?
 
-  totalAmount      Decimal
-  currency         String        @default("USD")
+  totalAmount         Decimal
+  currency            String        @default("USD")
 
-  status           BookingStatus @default(PENDING)
-  paymentStatus    PaymentStatus @default(UNPAID)
+  status              BookingStatus @default(PENDING)
+  paymentStatus       PaymentStatus @default(UNPAID)
 
   customer Customer @relation(
     fields: [customerId],
@@ -254,11 +213,6 @@ model Booking {
   updatedAt temporal.updatedAtString()
 }
 
-
-// ======================================================
-// ROUND TOUR NIGHT-BY-NIGHT DESTINATIONS
-// ======================================================
-
 model BookingDestination {
   id          Int    @id @default(autoincrement())
 
@@ -275,25 +229,6 @@ model BookingDestination {
   @@unique([bookingId, nightNumber])
 }
 
-
-// ======================================================
-// PRICING / MILEAGE
-//
-// Admin "Our Mileages" page ekata.
-//
-// kilometres
-// = route distance
-//
-// baseCharge
-// = normal route charge
-//
-// extraKilometreCharge
-// = extra 1km charge
-//
-// currency
-// = LKR
-// ======================================================
-
 model Pricing {
   id                   Int     @id @default(autoincrement())
 
@@ -301,31 +236,20 @@ model Pricing {
   toLocation           String
 
   kilometres           Decimal
-
   baseCharge           Decimal?
   extraKilometreCharge Decimal
 
   currency             String  @default("LKR")
-
   active               Boolean @default(true)
 
   createdAt            TimestamptzString @default(now())
   updatedAt            temporal.updatedAtString()
 }
 
-
-// ======================================================
-// PAYMENT
-//
-// IMPORTANT:
-// Card number / expiry / CVV database eke store karanne naha.
-// ======================================================
-
 model Payment {
   id                   Int           @id @default(autoincrement())
 
   bookingId            Int
-
   transactionReference String?       @unique
   amount               Decimal
   currency             String        @default("USD")
@@ -342,14 +266,6 @@ model Payment {
   createdAt TimestamptzString @default(now())
   updatedAt temporal.updatedAtString()
 }
-
-
-// ======================================================
-// FEEDBACK
-//
-// Frontend eke Booking Reference "Optional" nisa
-// customerId / bookingId optional.
-// ======================================================
 
 model Feedback {
   id         Int                @id @default(autoincrement())
@@ -378,11 +294,6 @@ model Feedback {
   createdAt TimestamptzString @default(now())
   updatedAt temporal.updatedAtString()
 }
-
-
-// ======================================================
-// CONTACT US
-// ======================================================
 
 model ContactMessage {
   id        Int           @id @default(autoincrement())

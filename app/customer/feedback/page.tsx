@@ -85,7 +85,7 @@ export default function FeedbackPage() {
 
                 <Input
                   label="Booking Reference"
-                  placeholder="e.g. GH-2026-0142" value={bookingReference} onChange={event => setBookingReference(event.target.value)}
+                  placeholder="e.g. GHC-W-3001" value={bookingReference} onChange={event => setBookingReference(event.target.value)}
                 />
 
                 {/* Rating */}

@@ -1,3 +1,5 @@
+"use client";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Logo from "@/components/common/logo";
 
@@ -30,12 +32,12 @@ export default function Footer() {
 
             <div className="flex flex-col gap-2.5 text-sm">
               <FooterLink href="/">Home</FooterLink>
-              <FooterLink href="/vehicles">Vehicles</FooterLink>
-              <FooterLink href="/booking/airport-transfer">
+              <FooterLink href="/customer/vehicles">Vehicles</FooterLink>
+              <FooterLink href="/customer/booking/airport-transfer">
                 How It Works
               </FooterLink>
-              <FooterLink href="/feedback">Feedbacks</FooterLink>
-              <FooterLink href="/contact">Contact Us</FooterLink>
+              <FooterLink href="/customer/feedback">Feedbacks</FooterLink>
+              <FooterLink href="/customer/contact">Contact Us</FooterLink>
             </div>
           </div>
 
@@ -46,15 +48,15 @@ export default function Footer() {
             </h3>
 
             <div className="flex flex-col gap-2.5 text-sm">
-              <FooterLink href="/booking/airport-transfer">
+              <FooterLink href="/customer/booking/airport-transfer">
                 Airport Transfers
               </FooterLink>
 
-              <FooterLink href="/booking/day-tour">
+              <FooterLink href="/customer/booking/day-tour">
                 Day Trips
               </FooterLink>
 
-              <FooterLink href="/booking/round-tour">
+              <FooterLink href="/customer/booking/round-tour">
                 Round Tours
               </FooterLink>
             </div>
@@ -88,7 +90,7 @@ export default function Footer() {
             © 2026 Green Holiday (Pvt) Ltd. All Rights Reserved.
           </p>
 
-          <SocialIcons />
+          <div className="flex items-center gap-5"><FooterLink href="/admin/login">Staff Login</FooterLink><SocialIcons /></div>
         </div>
       </div>
     </footer>
@@ -104,10 +106,13 @@ function FooterLink({
   href,
   children,
 }: FooterLinkProps) {
+  const pathname = usePathname();
+  const active = pathname === href || (href !== "/" && pathname.startsWith(href + "/"));
   return (
     <Link
       href={href}
-      className="transition-colors hover:text-white"
+      aria-current={active ? "page" : undefined}
+      className={active ? "font-semibold text-[var(--yellow-golden)] underline underline-offset-4" : "transition-colors hover:text-white hover:underline"}
     >
       {children}
     </Link>
