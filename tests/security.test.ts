@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { hashPassword, verifyPassword } from "../src/server/auth/password";
-import { authorize, verifyOrigin, consumeLimit, withApi } from "../src/server/http/guard";
+import { authorize, verifyOrigin, consumeLimit, trustedClientIp, withApi } from "../src/server/http/guard";
 import { HttpError, validateBody, parseVehicleRate, readJson } from "../src/server/http/validation";
 import { verifyPaymentLink } from "../src/server/bookingLinks";
 
@@ -79,4 +79,25 @@ test("payment endpoint never treats a browser card submission as paid", async ()
   assert.match(paymentRoute, /status: 503/);
   assert.doesNotMatch(paymentRoute, /\.update\(\{\s*paymentStatus:\s*["']PAID/);
   assert.doesNotMatch(paymentPage, /name=["'](?:cardNumber|cvv|cvc|expiry)["']/i);
+});
+
+test("rate limiting never groups all unproxied guests into the same fake IP", () => {
+  const before = process.env.TRUST_PROXY;
+  try {
+    const request = new Request("https://travel.example/api/contact", {
+      method: "POST", headers: { "x-forwarded-for": "203.0.113.10, 10.0.0.1" },
+      body: JSON.stringify({ email: "visitor@example.test" }),
+    });
+    process.env.TRUST_PROXY = "false";
+    assert.equal(trustedClientIp(request), null);
+    process.env.TRUST_PROXY = "true";
+    assert.equal(trustedClientIp(request), "203.0.113.10");
+    const malformed = new Request("https://travel.example/api/contact", {
+      headers: { "x-forwarded-for": "not-an-ip" },
+    });
+    assert.equal(trustedClientIp(malformed), null);
+  } finally {
+    if (before === undefined) delete process.env.TRUST_PROXY;
+    else process.env.TRUST_PROXY = before;
+  }
 });

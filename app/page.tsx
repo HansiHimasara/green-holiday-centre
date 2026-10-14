@@ -141,7 +141,7 @@ export default async function HomePage() {
         {/* FEATURED VEHICLES */}
         <section className="relative overflow-hidden py-20 md:py-24">
           <Image
-            src="/images/sri-lanka-cta.jpg"
+            src="/images/sri-lanka-cta.webp"
             alt=""
             fill
             sizes="100vw"
@@ -288,7 +288,7 @@ export default async function HomePage() {
         {/* FINAL CTA */}
         <section className="relative min-h-[440px] overflow-hidden">
           <Image
-            src="/images/sri-lanka-cta2.jpg"
+            src="/images/sri-lanka-cta2.webp"
             alt="Scenic Sri Lankan landscape"
             fill
             sizes="100vw"
