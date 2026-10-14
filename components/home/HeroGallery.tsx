@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 
-const photos = ["/images/Hero Section.png", "/images/sri-lanka-cta.jpg", "/images/sri-lanka-cta2.jpg"];
+const photos = ["/images/Hero Section.png", "/images/sri-lanka-cta.webp", "/images/sri-lanka-cta2.webp"];
 
 export default function HeroGallery() {
   const [index, setIndex] = useState(0);

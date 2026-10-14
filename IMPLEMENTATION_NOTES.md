@@ -8,7 +8,7 @@ This source is based on the uploaded `green-holiday-centre-clean.zip`. It preser
 2. Copy `.env.example` to `.env.local` and supply real values. Never put credentials in Git or a shared ZIP.
 3. Set `DATABASE_URL` to the project's existing Postgres database. The uploaded project uses Prisma ORM Postgres contracts; apply its existing migrations in the team's standard deployment process.
 4. Set `OPENROUTESERVICE_API_KEY` for driving route calculations. The location search uses Photon.
-5. Set `LKR_PER_USD` and each of `AIRPORT_TRANSFER_MARKUP_LKR`, `DAY_TOUR_MARKUP_LKR`, and `ROUND_TOUR_MARKUP_LKR`. Pricing fails closed while values are missing. These are admin set conversion and markup inputs, not a live exchange feed.
+5. Set `LKR_PER_USD` and configure positive per-vehicle LKR/km and daily driver batta in Admin > Vehicles. Legacy service markup environment variables are unused. USD fares round to the nearest $5.
 6. Set SMTP values, `APP_BASE_URL` to the public HTTPS origin, `BOOKING_LINK_SECRET` to a random secret of at least 32 characters, and `CRON_SECRET` to a separate random secret. Configure the same `APP_BASE_URL` and `CRON_SECRET` as repository action secrets for the daily reservation expiry task. A public deployment is needed for customer links.
 7. Run `npm test` and `npm run build`. Use the real database and map credentials for manual end-to-end tests.
 
@@ -16,7 +16,7 @@ This source is based on the uploaded `green-holiday-centre-clean.zip`. It preser
 
 - Home image swipe gallery uses the bundled Sri Lanka photos; vehicle cards and fleet pages read active vehicle records. The detail route is `/customer/vehicles/[id]`. A card links to the airport transfer form with its vehicle ID; the booking draft keeps the vehicle across service tabs.
 - Server and browser enforce travel dates at least two Sri Lankan calendar days out. Unpaid reservations are cancelled when the date is three days out by the authenticated daily task. Reservations made inside this expiry window are rejected.
-- Quotes use map road kilometres plus 20 km, vehicle LKR per km, a service specific LKR markup, then the configured LKR/USD divisor; server recalculates before saving the USD amount.
+- Quotes use (80 km + actual road km + 20 km per day) * vehicle LKR/km, plus driver batta per day, divided by LKR/USD; server recalculates before saving the USD amount.
 - Customer and admin feedback starts hidden until an admin approves it. Public feedback submissions now call the API.
 - Admin customers, vehicles, bookings, feedback, dashboard and reports load actual records. Vehicle editors accept a photo URL and LKR per km rate. The admin backup screen downloads a real business-data export and no longer claims that a browser state change restored a database.
 - No local card fields or fake payment success remain. Signed email payment links identify a booking but checkout is inactive until the existing gateway is integrated.

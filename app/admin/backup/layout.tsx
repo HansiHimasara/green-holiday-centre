@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import { requireAdminUser } from "@/src/server/auth/requireAdmin";
+import { requireSuperAdmin } from "@/src/server/auth/session";
 export const dynamic = "force-dynamic";
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
-  if (!(await requireAdminUser())) redirect("/admin/login");
+  if (!(await requireSuperAdmin())) redirect("/admin/dashboard");
   return children;
 }

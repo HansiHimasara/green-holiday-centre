@@ -1,3 +1,4 @@
+import { isIP } from "node:net";
 import { readProfilePhoto } from "./profilePhoto";
 import { HttpError, readJson, validateBody } from "./validation";
 
@@ -19,6 +20,17 @@ export function verifyOrigin(request: Request) {
   if (process.env.APP_BASE_URL) allowed.add(new URL(process.env.APP_BASE_URL).origin);
   if (origin && !allowed.has(origin)) throw new HttpError(403, "Invalid request origin.");
 }
+// Only a trusted reverse proxy that overwrites forwarded headers can supply the
+// true client address. Never rate-limit every visitor as a single "local" IP:
+// that creates an accidental global denial of service for legitimate guests.
+// In an unproxied environment, the per-email limiter still applies where there
+// is an email, but an edge/shared IP limiter MUST be configured for production.
+export function trustedClientIp(request: Request): string | null {
+  if (process.env.TRUST_PROXY !== "true") return null;
+  const address = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "";
+  return isIP(address) ? address : null;
+}
+
 // Single-process protection. Use a shared reverse-proxy/Redis limiter when running multiple instances.
 const attempts = new Map<string, { count: number; until: number }>();
 export function consumeLimit(key: string, max: number, now = Date.now()) {
@@ -47,10 +59,13 @@ export function withApi<T extends (...args: never[]) => Promise<Response>>(handl
         if (path === "/api/auth/me" && Object.hasOwn(body as object, "photo")) readProfilePhoto((body as Record<string, unknown>).photo);
         if (!path.startsWith("/api/admin/") && path !== "/api/auth/me") {
           const record = body as Record<string, unknown>;
-          const email = typeof record.email === "string" ? record.email.toLowerCase().trim() : "";
-          // Only trust an IP header if a trusted proxy replaces it (see SETUP.md).
-          const ip = process.env.TRUST_PROXY === "true" ? request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown" : "local";
-          consumeLimit(`${path}:ip:${ip}`, path.includes("/auth/") ? 50 : 120);
+          const nestedCustomer = record.customer;
+          const nestedEmail = nestedCustomer && typeof nestedCustomer === "object" && !Array.isArray(nestedCustomer)
+            ? (nestedCustomer as Record<string, unknown>).email : undefined;
+          const suppliedEmail = typeof record.email === "string" ? record.email : nestedEmail;
+          const email = typeof suppliedEmail === "string" ? suppliedEmail.toLowerCase().trim() : "";
+          const ip = trustedClientIp(request);
+          if (ip) consumeLimit(`${path}:ip:${ip}`, path.includes("/auth/") ? 50 : 120);
           if (email) consumeLimit(`${path}:email:${email}`, path.includes("/auth/") ? 10 : 30);
         }
       }

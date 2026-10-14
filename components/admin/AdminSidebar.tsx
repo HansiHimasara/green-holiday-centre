@@ -99,7 +99,7 @@ export default function AdminSidebar({
       </div>
 
       <nav className="flex flex-1 flex-col gap-2">
-        {menuItems.map((item) => {
+        {menuItems.filter(item => item.label !== "Backup" || isSuperAdmin).map((item) => {
           if (
             item.label === "Profile" &&
             isSuperAdmin
