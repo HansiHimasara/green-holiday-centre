@@ -25,7 +25,24 @@ function run(args) {
     child.on('error', reject); child.on('exit', code => code === 0 ? resolve() : reject(new Error(`Command failed (${code}): ${args.join(' ')}`)));
   });
 }
+// Keep cleanup bounded: a lingering PostgreSQL socket must not leave a
+// completed isolated test run with Node's unsettled-top-level-await exit 13.
+async function finishWithin(label, action, timeoutMs = 5000) {
+  let timer;
+  try {
+    return await Promise.race([
+      Promise.resolve().then(action),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 let app;
+let testFailure = null;
 try {
   await run(['node_modules/prisma/dist/prisma.js', 'db', 'init', '--no-interactive']);
   // Fixtures are inserted into the temporary database only.
@@ -54,7 +71,36 @@ try {
   if (!ready) throw new Error('App failed to start: ' + logs);
   try { await run(['--import', 'tsx', '--test', 'tests/integration/api.test.ts']); }
   catch (error) { console.error(logs); throw error; }
+} catch (error) {
+  // Preserve a failing assertion or setup error as a failing CI result.
+  testFailure = error;
+  console.error(error);
 } finally {
-  if (app) { app.kill('SIGTERM'); await once(app, 'exit').catch(() => {}); }
-  await socket.stop(); await database.close();
+  if (app && app.exitCode === null && app.signalCode === null) {
+    const exited = once(app, 'exit');
+    app.kill('SIGTERM');
+    try {
+      await finishWithin('Next.js test server shutdown', () => exited);
+    } catch (error) {
+      console.warn(`[integration cleanup] ${error.message}; forcing test server to exit`);
+      app.kill('SIGKILL');
+    }
+  }
+
+  // This DB lives only inside this test-runner process. Prefer graceful
+  // cleanup, but don't wait forever for lingering socket clients.
+  for (const [label, action] of [
+    ['PGlite socket shutdown', () => socket.stop()],
+    ['PGlite database shutdown', () => database.close()],
+  ]) {
+    try {
+      await finishWithin(label, action);
+    } catch (error) {
+      console.warn(`[integration cleanup] ${error.message}; isolated in-memory resource will be discarded on exit`);
+    }
+  }
 }
+
+// Intentionally terminate this disposable test-runner process: residual
+// PGlite connections cannot keep CI hanging. Test failures still exit 1.
+process.exit(testFailure ? 1 : 0);
