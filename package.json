@@ -16,7 +16,8 @@
     "db:verify": "prisma db verify",
     "db:migrate": "prisma db migrate",
     "db:check": "tsx scripts/check-database.ts",
-    "admin:create": "tsx scripts/create-super-admin.ts"
+    "admin:create": "tsx scripts/create-super-admin.ts",
+    "security:check": "node scripts/check-security.mjs"
   },
   "dependencies": {
     "@prisma/orm-postgres": "8.0.0-rc.11",

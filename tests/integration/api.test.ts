@@ -125,7 +125,7 @@ test("booking creation computes price and never overwrites an existing guest pro
   const id = vehicles.vehicles.find((v: { model: string }) => v.model === "Fixture Vehicle").dbId;
   const travelDate = new Date(Date.now() + 8 * 86400000).toISOString().slice(0, 10);
   const booking = { requestId: crypto.randomUUID(), serviceType: "AIRPORT_TRANSFER", vehicleTypeId: id, travelDate, passengerCount: 2, luggageCount: 1,
-    pickupLocation: "Colombo", dropoffLocation: "Airport", totalAmount: 0.01, currency: "LKR", reservationOnly: true,
+    pickupLocation: "Colombo", dropoffLocation: "Bandaranaike International Airport, Katunayake, Sri Lanka", totalAmount: 0.01, currency: "LKR", reservationOnly: true,
     customer: { fullName: "Attacker Name", email: "owner@example.test", phone: "+94771111111", passportNumber: "B123456" } };
   const response = await call("/api/bookings", "POST", booking);
   assert.equal(response.status, 201, await response.clone().text());

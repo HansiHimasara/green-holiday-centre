@@ -7,6 +7,11 @@ const nextConfig: NextConfig = {
       { key: "X-Frame-Options", value: "DENY" },
       { key: "Referrer-Policy", value: "no-referrer" },
       { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+      { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
+      { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
+      ...(process.env.NODE_ENV === "production" ? [
+        { key: "Strict-Transport-Security", value: "max-age=31536000" },
+      ] : []),
     ] }];
   },
 };
