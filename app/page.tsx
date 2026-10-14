@@ -141,9 +141,10 @@ export default async function HomePage() {
         {/* FEATURED VEHICLES */}
         <section className="relative overflow-hidden py-20 md:py-24">
           <Image
-            src="/images/sri-lanka-cta.jpg"
+            src="/images/sri-lanka-cta.webp"
             alt=""
             fill
+            sizes="100vw"
             className="z-0 object-cover"
             aria-hidden="true"
           />
@@ -193,6 +194,7 @@ export default async function HomePage() {
                           unoptimized
                           alt={vehicle.name}
                           fill
+                          sizes="(min-width: 1280px) 390px, (min-width: 768px) 33vw, 100vw"
                           className="object-cover transition-transform duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.035]"
                         />
                         <div className="absolute inset-0 bg-black/0 transition-colors duration-700 group-hover:bg-black/[0.03]" />
@@ -286,9 +288,10 @@ export default async function HomePage() {
         {/* FINAL CTA */}
         <section className="relative min-h-[440px] overflow-hidden">
           <Image
-            src="/images/sri-lanka-cta2.jpg"
+            src="/images/sri-lanka-cta2.webp"
             alt="Scenic Sri Lankan landscape"
             fill
+            sizes="100vw"
             className="object-cover"
           />
           <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,31,20,0.84)_0%,rgba(5,31,20,0.68)_45%,rgba(5,31,20,0.42)_100%)]" />

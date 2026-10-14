@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { db } from "../src/prisma/db";
-const required = ["DATABASE_URL", "APP_BASE_URL", "BOOKING_LINK_SECRET", "OPENROUTESERVICE_API_KEY", "AIRPORT_TRANSFER_MARKUP_LKR", "LKR_PER_USD", "SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM"];
+const required = ["DATABASE_URL", "APP_BASE_URL", "BOOKING_LINK_SECRET", "OPENROUTESERVICE_API_KEY", "LKR_PER_USD", "SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM"];
 for (const name of required) console.log(`${name}: ${process.env[name] ? "configured" : "MISSING"}`);
 try {
   // This real read also verifies the Prisma contract marker; it does not change data.

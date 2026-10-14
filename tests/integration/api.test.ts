@@ -82,6 +82,12 @@ test("profile PATCH cannot elevate roles or expose password hashes", async () =>
   assert.equal(body.user.role, "ADMIN"); assert.equal(body.user.passwordHash, undefined);
   assert.equal((await (await call("/api/auth/me", "GET", undefined, adminCookie)).json()).user.fullName, "Updated Admin");
 });
+test("business-data export is restricted to super admins", async () => {
+  assert.equal((await call("/api/admin/backup", "GET", undefined, adminCookie)).status, 403);
+  const allowed = await call("/api/admin/backup", "GET", undefined, superCookie);
+  assert.equal(allowed.status, 200);
+  assert.match(allowed.headers.get("content-disposition") || "", /attachment/);
+});
 test("admin cannot create accounts; super admin can create then delete", async () => {
   const body = { fullName: "New Admin", username: "newadmin", email: "newadmin@example.test", password, role: "SUPER_ADMIN" };
   assert.equal((await call("/api/admin/users", "POST", body, adminCookie)).status, 403);
@@ -130,7 +136,7 @@ test("booking creation computes price and never overwrites an existing guest pro
   const response = await call("/api/bookings", "POST", booking);
   assert.equal(response.status, 201, await response.clone().text());
   const body = await response.json();
-  assert.equal(body.booking.totalAmount, 65); // Airport: (110 km * Rs. 150 + Rs. 1800) / 300, rounded up to $5.
+  assert.equal(body.booking.totalAmount, 60); // Airport: (110 km * Rs. 150 + Rs. 1800) / 300 = $61, nearest $5 is $60.
   const retried = await call("/api/bookings", "POST", booking);
   assert.equal(retried.status, 200); assert.equal((await retried.json()).booking.id, body.booking.id);
   assert.equal(body.booking.status, "PENDING");
@@ -138,7 +144,7 @@ test("booking creation computes price and never overwrites an existing guest pro
   const receipt = await call(`/api/booking-confirmation?booking=${body.booking.id}&token=${body.confirmationToken}`);
   assert.equal(receipt.status, 200);
   const receiptBody = (await receipt.json()).booking;
-  assert.equal(receiptBody.totalAmount, 65);
+  assert.equal(receiptBody.totalAmount, 60);
   assert.equal(receiptBody.paymentStatus, "UNPAID");
   assert.equal(receiptBody.vehicleName, "Fixture Vehicle");
   assert.equal(receiptBody.customer, undefined);
@@ -199,7 +205,9 @@ test("day and round tours save destinations and validate matching overnight date
     assert.deepEqual(receipt.booking.destinations, data.destinations);
     // Test map returns 10 km and the fixture vehicle has 150 LKR/km,
     // 1800 LKR/day batta, and a 300 LKR/USD exchange rate.
-    assert.equal(receipt.booking.totalAmount, serviceType === "DAY_TOUR" ? 65 : 95);
+    // With nearest-$5 rounding, the DAY_TOUR fixture is $61 -> $60.
+    // ROUND_TOUR is $93 -> $95.
+    assert.equal(receipt.booking.totalAmount, serviceType === "DAY_TOUR" ? 60 : 95);
     assert.equal(receipt.booking.paymentStatus, "UNPAID");
   }
   assert.equal((await call("/api/bookings", "POST", { ...payload, serviceType: "ROUND_TOUR", returnDate, numberOfNights: 10 })).status, 400);
