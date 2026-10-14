@@ -8,7 +8,12 @@ export function authorize(actor: Actor, superAdmin = false) {
 }
 export function verifyOrigin(request: Request) {
   if (["GET", "HEAD", "OPTIONS"].includes(request.method)) return;
-  if (request.headers.get("sec-fetch-site") === "cross-site") throw new HttpError(403, "Cross-site requests are not allowed.");
+  // Reject requests from sibling subdomains too: they share a "site" but not an origin.
+  // Requests without Fetch Metadata (for example server-to-server jobs) still use Origin checks.
+  const fetchSite = request.headers.get("sec-fetch-site");
+  if (fetchSite && fetchSite !== "same-origin" && fetchSite !== "none") {
+    throw new HttpError(403, "Cross-origin requests are not allowed.");
+  }
   const origin = request.headers.get("origin");
   const allowed = new Set([new URL(request.url).origin]);
   if (process.env.APP_BASE_URL) allowed.add(new URL(process.env.APP_BASE_URL).origin);

@@ -57,11 +57,11 @@ async function handlePOST(
       );
     }
 
-    if (password.length < 8) {
+    if (password.length < 8 || password.length > 128) {
       return NextResponse.json(
         {
           error:
-            "Password must contain at least 8 characters.",
+            "Password must contain 8–128 characters.",
         },
         {
           status: 400,
@@ -135,7 +135,9 @@ async function handlePOST(
           throw new Error("Reset token is expired or already used.");
         }
         const activeUser = await tx.orm.public.User.where({ id: resetToken.userId, status: "ACTIVE" }).first();
-        if (!activeUser) throw new Error("Account unavailable.");
+        if (!activeUser || !["ADMIN", "SUPER_ADMIN"].includes(activeUser.role)) {
+          throw new Error("Account unavailable.");
+        }
         // Save the new password
         await tx.orm.public.User
           .where({

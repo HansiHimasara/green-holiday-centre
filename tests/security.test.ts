@@ -58,3 +58,25 @@ test("malformed JSON is a 400 response and handler is never called", async () =>
 test("request parser refuses oversized bodies", async () => {
   await assert.rejects(readJson(new Request("http://localhost/api/contact", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message: "a".repeat(70000) }) })), (e: unknown) => e instanceof HttpError && e.status === 413);
 });
+
+test("fetch metadata rejects sibling-subdomain mutation attempts", () => {
+  assert.throws(() => verifyOrigin(new Request("https://travel.example/api/auth/logout", {
+    method: "POST", headers: { "sec-fetch-site": "same-site" },
+  })), (e: unknown) => e instanceof HttpError && e.status === 403);
+  assert.throws(() => verifyOrigin(new Request("https://travel.example/api/auth/logout", {
+    method: "POST", headers: { "sec-fetch-site": "cross-site", origin: "https://travel.example" },
+  })), (e: unknown) => e instanceof HttpError && e.status === 403);
+  verifyOrigin(new Request("https://travel.example/api/auth/logout", {
+    method: "POST", headers: { "sec-fetch-site": "same-origin", origin: "https://travel.example" },
+  }));
+});
+test("payment endpoint never treats a browser card submission as paid", async () => {
+  // Static contract check: intentionally no card capture or payment callback until a
+  // contracted provider and verified server-to-server payment notification exist.
+  const { readFileSync } = await import("node:fs");
+  const paymentRoute = readFileSync(new URL("../app/api/booking-payment/route.ts", import.meta.url), "utf8");
+  const paymentPage = readFileSync(new URL("../app/customer/booking/payment/page.tsx", import.meta.url), "utf8");
+  assert.match(paymentRoute, /status: 503/);
+  assert.doesNotMatch(paymentRoute, /\.update\(\{\s*paymentStatus:\s*["']PAID/);
+  assert.doesNotMatch(paymentPage, /name=["'](?:cardNumber|cvv|cvc|expiry)["']/i);
+});
