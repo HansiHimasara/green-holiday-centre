@@ -21,6 +21,7 @@ type Vehicle = {
   fuelType: string;
   description: string;
   rate: string;
+  driverBattaPerDayLkr: number;
   imageUrl?: string;
   dbId?: number;
   status: VehicleStatus;
@@ -171,8 +172,11 @@ export default function AdminVehiclesPage() {
       !editingVehicle.transmission.trim() ||
       !editingVehicle.fuelType.trim() ||
       !editingVehicle.description.trim() ||
-      !editingVehicle.rate.trim()
+      !editingVehicle.rate.trim() ||
+      !Number.isSafeInteger(editingVehicle.driverBattaPerDayLkr) ||
+      editingVehicle.driverBattaPerDayLkr <= 0
     ) {
+      window.alert("Complete all vehicle fields and enter a positive whole-number driver batta (LKR per day).");
       return;
     }
 
@@ -229,6 +233,7 @@ export default function AdminVehiclesPage() {
       fuelType: "Hybrid",
       description: "",
       rate: "",
+      driverBattaPerDayLkr: 0,
       imageUrl: "",
       status: "active",
     };
@@ -403,6 +408,10 @@ export default function AdminVehiclesPage() {
 
                 <th className="whitespace-nowrap px-5 py-3 text-left text-[10px] font-extrabold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
                   Base Rate
+                </th>
+
+                <th className="whitespace-nowrap px-5 py-3 text-left text-[10px] font-extrabold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+                  Driver Batta (LKR/day) — Admin Only
                 </th>
 
                 <th className="whitespace-nowrap px-5 py-3 text-left text-[10px] font-extrabold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
@@ -659,6 +668,30 @@ export default function AdminVehiclesPage() {
                         ) : (
                           <span className="text-[12px] font-bold text-[var(--green-dark)]">
                             {vehicle.rate || "—"}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Private daily driver batta. Never sent to public vehicle APIs. */}
+                      <td className="px-5 py-4">
+                        {isEditing && editingVehicle ? (
+                          <input
+                            type="number"
+                            min="1"
+                            max="1000000"
+                            step="1"
+                            value={editingVehicle.driverBattaPerDayLkr}
+                            onChange={(event) =>
+                              updateEditingField("driverBattaPerDayLkr", Number(event.target.value))
+                            }
+                            className={`${inputClasses} min-w-[140px]`}
+                            aria-label="Private driver batta in LKR per day"
+                          />
+                        ) : (
+                          <span className="text-[12px] font-bold text-[var(--green-dark)]">
+                            {vehicle.driverBattaPerDayLkr > 0
+                              ? `Rs. ${vehicle.driverBattaPerDayLkr.toLocaleString()}/day`
+                              : "Not configured"}
                           </span>
                         )}
                       </td>
