@@ -141,7 +141,7 @@ export default function PaymentPage() {
                 </div>
 
                 <div className="rounded-lg border-l-[3px] border-[#E7BC43] bg-[#FFFAEA] px-4 py-3 text-[12px] leading-5 text-[#816521]">
-                  <strong>Design preview:</strong> Use test details only. No payment is processed. Replace card fields with your gateway&apos;s hosted card elements before going live.
+                  <strong>Design preview:</strong> Card fields are disabled until a secure payment provider is connected. No payment is processed.
                 </div>
 
                 <div>
@@ -152,18 +152,18 @@ export default function PaymentPage() {
                   <label htmlFor="cardNumber" className={labelClasses}>Card number</label>
                   {/* DEMO INPUT: REPLACE WITH GATEWAY HOSTED FIELD, NOT A SELF-POSTED CARD INPUT. */}
                   <div className="relative">
-                    <input id="cardNumber" name="cardNumber" type="text" placeholder="0000 0000 0000 0000" inputMode="numeric" autoComplete="off" maxLength={23} required className={`${inputClasses} pr-12`} />
+                    <input id="cardNumber" type="text" placeholder="0000 0000 0000 0000" inputMode="numeric" autoComplete="off" disabled className={`${inputClasses} pr-12`} />
                     <span className="pointer-events-none absolute right-4 top-[25px] text-[#7195A3]"><CardIcon /></span>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div><label htmlFor="cardExpiry" className={labelClasses}>Expiry date</label>
                     {/* DEMO INPUT: REPLACE WITH GATEWAY HOSTED FIELD. */}
-                    <input id="cardExpiry" name="cardExpiry" type="text" inputMode="numeric" autoComplete="off" placeholder="MM / YY" maxLength={7} required className={inputClasses} />
+                    <input id="cardExpiry" type="text" inputMode="numeric" autoComplete="off" placeholder="MM / YY" disabled className={inputClasses} />
                   </div>
                   <div><label htmlFor="cardCvc" className={labelClasses}>CVV / CVC</label>
                     {/* DEMO INPUT: REPLACE WITH GATEWAY HOSTED FIELD. */}
-                    <input id="cardCvc" name="cardCvc" type="password" inputMode="numeric" autoComplete="off" placeholder="•••" maxLength={4} required className={inputClasses} />
+                    <input id="cardCvc" type="password" inputMode="numeric" autoComplete="off" placeholder="•••" disabled className={inputClasses} />
                   </div>
                 </div>
                 <div>
