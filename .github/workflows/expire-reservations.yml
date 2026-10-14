@@ -1,0 +1,21 @@
+name: Expire unpaid reservations
+
+on:
+  schedule:
+    - cron: "30 18 * * *" # midnight in Sri Lanka
+  workflow_dispatch:
+
+jobs:
+  expire:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel unpaid reservations three days before travel
+        env:
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          test -n "$APP_BASE_URL"
+          test -n "$CRON_SECRET"
+          curl --fail --show-error --silent --retry 3 \
+            -X POST "$APP_BASE_URL/api/cron/cancel-unpaid" \
+            -H "Authorization: Bearer $CRON_SECRET"

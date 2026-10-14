@@ -1,0 +1,1096 @@
+[
+  {
+    "id": "table.passwordResetToken",
+    "label": "Create table \"passwordResetToken\"",
+    "summary": "Creates table \"passwordResetToken\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "passwordResetToken"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"passwordResetToken\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"passwordResetToken\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"passwordResetToken\"",
+        "sql": "CREATE TABLE \"public\".\"passwordResetToken\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"expiresAt\" timestamptz NOT NULL,\n  \"id\" SERIAL NOT NULL,\n  \"tokenHash\" text NOT NULL,\n  \"usedAt\" timestamptz,\n  \"userId\" int4 NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"passwordResetToken\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"passwordResetToken\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.session",
+    "label": "Create table \"session\"",
+    "summary": "Creates table \"session\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "session"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"session\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"session\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"session\"",
+        "sql": "CREATE TABLE \"public\".\"session\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"expiresAt\" timestamptz NOT NULL,\n  \"id\" SERIAL NOT NULL,\n  \"tokenHash\" text NOT NULL,\n  \"userId\" int4 NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"session\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"session\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.contactMessage.readAt",
+    "label": "Add column \"readAt\" to \"contactMessage\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "readAt",
+        "table": "contactMessage"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"readAt\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "contactMessage",
+          "readAt"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"readAt\"",
+        "sql": "ALTER TABLE \"public\".\"contactMessage\" ADD COLUMN \"readAt\" timestamptz"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"readAt\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "contactMessage",
+          "readAt"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.contactMessage.repliedAt",
+    "label": "Add column \"repliedAt\" to \"contactMessage\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "repliedAt",
+        "table": "contactMessage"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"repliedAt\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "contactMessage",
+          "repliedAt"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"repliedAt\"",
+        "sql": "ALTER TABLE \"public\".\"contactMessage\" ADD COLUMN \"repliedAt\" timestamptz"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"repliedAt\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "contactMessage",
+          "repliedAt"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.feedback.email",
+    "label": "Add column \"email\" to \"feedback\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "email",
+        "table": "feedback"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"email\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "feedback",
+          "email"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"email\"",
+        "sql": "ALTER TABLE \"public\".\"feedback\" ADD COLUMN \"email\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"email\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "feedback",
+          "email"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.feedback.fullName",
+    "label": "Add column \"fullName\" to \"feedback\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "fullName",
+        "table": "feedback"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"fullName\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "feedback",
+          "fullName"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"fullName\"",
+        "sql": "ALTER TABLE \"public\".\"feedback\" ADD COLUMN \"fullName\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"fullName\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "feedback",
+          "fullName"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "alterNullability.setNotNull.feedback.fullName",
+    "label": "Set NOT NULL on \"feedback\".\"fullName\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "fullName",
+        "table": "feedback"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"fullName\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "feedback",
+          "fullName"
+        ]
+      },
+      {
+        "description": "ensure no NULL values in \"fullName\"",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"public\".\"feedback\" WHERE \"fullName\" IS NULL) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "set NOT NULL on \"fullName\"",
+        "sql": "ALTER TABLE \"public\".\"feedback\" ALTER COLUMN \"fullName\" SET NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"fullName\" is NOT NULL",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"is_nullable\" = $4)) AS \"result\"",
+        "params": [
+          "public",
+          "feedback",
+          "fullName",
+          "NO"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "alterNullability.dropNotNull.feedback.bookingId",
+    "label": "Drop NOT NULL on \"feedback\".\"bookingId\"",
+    "operationClass": "widening",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "bookingId",
+        "table": "feedback"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"bookingId\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "feedback",
+          "bookingId"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop NOT NULL on \"bookingId\"",
+        "sql": "ALTER TABLE \"public\".\"feedback\" ALTER COLUMN \"bookingId\" DROP NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"bookingId\" is nullable",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"is_nullable\" = $4)) AS \"result\"",
+        "params": [
+          "public",
+          "feedback",
+          "bookingId",
+          "YES"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "alterNullability.dropNotNull.feedback.customerId",
+    "label": "Drop NOT NULL on \"feedback\".\"customerId\"",
+    "operationClass": "widening",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "customerId",
+        "table": "feedback"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"customerId\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "feedback",
+          "customerId"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop NOT NULL on \"customerId\"",
+        "sql": "ALTER TABLE \"public\".\"feedback\" ALTER COLUMN \"customerId\" DROP NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"customerId\" is nullable",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"is_nullable\" = $4)) AS \"result\"",
+        "params": [
+          "public",
+          "feedback",
+          "customerId",
+          "YES"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.user.lastLoginAt",
+    "label": "Add column \"lastLoginAt\" to \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "lastLoginAt",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"lastLoginAt\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "lastLoginAt"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"lastLoginAt\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD COLUMN \"lastLoginAt\" timestamptz"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"lastLoginAt\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "lastLoginAt"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.user.status",
+    "label": "Add column \"status\" to \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "status",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"status\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "status"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"status\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD COLUMN \"status\" text DEFAULT 'ACTIVE' NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"status\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "status"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.user.username",
+    "label": "Add column \"username\" to \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "username",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"username\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "username"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"username\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD COLUMN \"username\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"username\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "username"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.vehicleType.airConditioning",
+    "label": "Add column \"airConditioning\" to \"vehicleType\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "airConditioning",
+        "table": "vehicleType"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"airConditioning\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "vehicleType",
+          "airConditioning"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"airConditioning\"",
+        "sql": "ALTER TABLE \"public\".\"vehicleType\" ADD COLUMN \"airConditioning\" bool DEFAULT true NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"airConditioning\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "vehicleType",
+          "airConditioning"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.vehicleType.chauffeurIncluded",
+    "label": "Add column \"chauffeurIncluded\" to \"vehicleType\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "chauffeurIncluded",
+        "table": "vehicleType"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"chauffeurIncluded\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "vehicleType",
+          "chauffeurIncluded"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"chauffeurIncluded\"",
+        "sql": "ALTER TABLE \"public\".\"vehicleType\" ADD COLUMN \"chauffeurIncluded\" bool DEFAULT true NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"chauffeurIncluded\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "vehicleType",
+          "chauffeurIncluded"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.vehicleType.chauffeurLanguage",
+    "label": "Add column \"chauffeurLanguage\" to \"vehicleType\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "chauffeurLanguage",
+        "table": "vehicleType"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"chauffeurLanguage\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "vehicleType",
+          "chauffeurLanguage"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"chauffeurLanguage\"",
+        "sql": "ALTER TABLE \"public\".\"vehicleType\" ADD COLUMN \"chauffeurLanguage\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"chauffeurLanguage\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "vehicleType",
+          "chauffeurLanguage"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.vehicleType.fuelType",
+    "label": "Add column \"fuelType\" to \"vehicleType\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "fuelType",
+        "table": "vehicleType"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"fuelType\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "vehicleType",
+          "fuelType"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"fuelType\"",
+        "sql": "ALTER TABLE \"public\".\"vehicleType\" ADD COLUMN \"fuelType\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"fuelType\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "vehicleType",
+          "fuelType"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.vehicleType.transmission",
+    "label": "Add column \"transmission\" to \"vehicleType\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "transmission",
+        "table": "vehicleType"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"transmission\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "vehicleType",
+          "transmission"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"transmission\"",
+        "sql": "ALTER TABLE \"public\".\"vehicleType\" ADD COLUMN \"transmission\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"transmission\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "vehicleType",
+          "transmission"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "alterNullability.setNotNull.booking.travelDate",
+    "label": "Set NOT NULL on \"booking\".\"travelDate\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "travelDate",
+        "table": "booking"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"travelDate\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "booking",
+          "travelDate"
+        ]
+      },
+      {
+        "description": "ensure no NULL values in \"travelDate\"",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"public\".\"booking\" WHERE \"travelDate\" IS NULL) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "set NOT NULL on \"travelDate\"",
+        "sql": "ALTER TABLE \"public\".\"booking\" ALTER COLUMN \"travelDate\" SET NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"travelDate\" is NOT NULL",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"is_nullable\" = $4)) AS \"result\"",
+        "params": [
+          "public",
+          "booking",
+          "travelDate",
+          "NO"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.passwordResetToken.passwordResetToken_tokenHash_key",
+    "label": "Add unique constraint on \"passwordResetToken\" (tokenHash)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "passwordResetToken_tokenHash_key",
+        "table": "passwordResetToken"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"passwordResetToken_tokenHash_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "passwordResetToken_tokenHash_key",
+          "public",
+          "\"public\".\"passwordResetToken\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"passwordResetToken_tokenHash_key\"",
+        "sql": "ALTER TABLE \"public\".\"passwordResetToken\" ADD CONSTRAINT \"passwordResetToken_tokenHash_key\" UNIQUE (\"tokenHash\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"passwordResetToken_tokenHash_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "passwordResetToken_tokenHash_key",
+          "public",
+          "\"public\".\"passwordResetToken\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.session.session_tokenHash_key",
+    "label": "Add unique constraint on \"session\" (tokenHash)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "session_tokenHash_key",
+        "table": "session"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"session_tokenHash_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "session_tokenHash_key",
+          "public",
+          "\"public\".\"session\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"session_tokenHash_key\"",
+        "sql": "ALTER TABLE \"public\".\"session\" ADD CONSTRAINT \"session_tokenHash_key\" UNIQUE (\"tokenHash\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"session_tokenHash_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "session_tokenHash_key",
+          "public",
+          "\"public\".\"session\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.user.user_username_key",
+    "label": "Add unique constraint on \"user\" (username)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "user_username_key",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"user_username_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "user_username_key",
+          "public",
+          "\"public\".\"user\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"user_username_key\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD CONSTRAINT \"user_username_key\" UNIQUE (\"username\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"user_username_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "user_username_key",
+          "public",
+          "\"public\".\"user\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.user.user_status_check_56c81764",
+    "label": "Add check constraint \"user_status_check_56c81764\" on \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "user_status_check_56c81764",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"user_status_check_56c81764\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "user_status_check_56c81764",
+          "public",
+          "\"public\".\"user\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"user_status_check_56c81764\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD CONSTRAINT \"user_status_check_56c81764\" CHECK (\"status\" IN ('ACTIVE', 'DISABLED'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"user_status_check_56c81764\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "user_status_check_56c81764",
+          "public",
+          "\"public\".\"user\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.passwordResetToken.passwordResetToken_userId_idx_a489d58a",
+    "label": "Create index \"passwordResetToken_userId_idx_a489d58a\" on \"passwordResetToken\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "passwordResetToken_userId_idx_a489d58a",
+        "table": "passwordResetToken"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"passwordResetToken_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"passwordResetToken_userId_idx_a489d58a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"passwordResetToken_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"passwordResetToken_userId_idx_a489d58a\" ON \"public\".\"passwordResetToken\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"passwordResetToken_userId_idx_a489d58a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"passwordResetToken_userId_idx_a489d58a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.session.session_userId_idx_a489d58a",
+    "label": "Create index \"session_userId_idx_a489d58a\" on \"session\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "session_userId_idx_a489d58a",
+        "table": "session"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"session_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"session_userId_idx_a489d58a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"session_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"session_userId_idx_a489d58a\" ON \"public\".\"session\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"session_userId_idx_a489d58a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"session_userId_idx_a489d58a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.passwordResetToken.passwordResetToken_userId_fkey",
+    "label": "Add foreign key \"passwordResetToken_userId_fkey\" on \"passwordResetToken\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "passwordResetToken_userId_fkey",
+        "table": "passwordResetToken"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"passwordResetToken_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "passwordResetToken_userId_fkey",
+          "public",
+          "\"public\".\"passwordResetToken\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"passwordResetToken_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"passwordResetToken\"\nADD CONSTRAINT \"passwordResetToken_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"user\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"passwordResetToken_userId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "passwordResetToken_userId_fkey",
+          "public",
+          "\"public\".\"passwordResetToken\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.session.session_userId_fkey",
+    "label": "Add foreign key \"session_userId_fkey\" on \"session\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "session_userId_fkey",
+        "table": "session"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"session_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "session_userId_fkey",
+          "public",
+          "\"public\".\"session\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"session_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"session\"\nADD CONSTRAINT \"session_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"user\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"session_userId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "session_userId_fkey",
+          "public",
+          "\"public\".\"session\""
+        ]
+      }
+    ]
+  }
+]
