@@ -37,7 +37,7 @@ try {
     ('Test Super','testsuper','super@example.test',$1,'SUPER_ADMIN','ACTIVE',now()),
     ('Test Admin','testadmin','admin@example.test',$1,'ADMIN','ACTIVE',now()),
     ('Disabled','disabled','disabled@example.test',$1,'ADMIN','DISABLED',now())`, [hash]);
-  await database.query(`INSERT INTO "vehicleType" (name, "passengerCapacity", "luggageCapacity", "ratePerKm", "updatedAt") VALUES ('Fixture Vehicle', 4, 2, 150, now())`);
+  await database.query(`INSERT INTO "vehicleType" (name, "passengerCapacity", "luggageCapacity", "ratePerKm", "driverBattaPerDayLkr", "updatedAt") VALUES ('Fixture Vehicle', 4, 2, 150, 1800, now())`);
   await database.query(`INSERT INTO "customer" ("fullName", email, phone, "passportNumber", "updatedAt") VALUES ('Original Guest', 'owner@example.test', '+94770000000', 'A123456', now())`);
   await database.query(`INSERT INTO "vehicleType" (name, "passengerCapacity", "luggageCapacity", "ratePerKm", "updatedAt") VALUES ('Unpriced Vehicle', 4, 2, 0, now())`);
   const expired = createHash('sha256').update('x'.repeat(43)).digest('hex');

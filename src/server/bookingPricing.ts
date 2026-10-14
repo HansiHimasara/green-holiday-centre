@@ -1,4 +1,5 @@
 import { validAirportTransfer } from "../shared/airports";
+import { calculateFare } from "./pricingFormula";
 export class BookingPricingError extends Error {}
 
 export type BookingPricingServiceType =
@@ -396,6 +397,8 @@ export async function calculateBookingPrice({
   dropoffLocation,
   waypoints = [],
   vehicleRatePerKm,
+  driverBattaPerDayLkr,
+  numberOfDays = 1,
 }: {
   serviceType:
     BookingPricingServiceType;
@@ -411,6 +414,9 @@ export async function calculateBookingPrice({
 
   vehicleRatePerKm:
     number;
+
+  driverBattaPerDayLkr: number;
+  numberOfDays?: number;
 }): Promise<BookingPriceResult> {
   if (serviceType === "AIRPORT_TRANSFER" && !validAirportTransfer(pickupLocation, dropoffLocation)) throw new BookingPricingError("Select a Sri Lankan airport as your pickup or drop location, with a different other endpoint.");
   if (
@@ -494,29 +500,30 @@ export async function calculateBookingPrice({
     ];
   }
 
-  const markupNames: Record<BookingPricingServiceType, string> = {
-    AIRPORT_TRANSFER: "AIRPORT_TRANSFER_MARKUP_LKR",
-    DAY_TOUR: "DAY_TOUR_MARKUP_LKR",
-    ROUND_TOUR: "ROUND_TOUR_MARKUP_LKR",
-  };
-  const markup = Number(process.env[markupNames[serviceType]]);
   const lkrPerUsd = Number(process.env.LKR_PER_USD);
-  if (!process.env[markupNames[serviceType]] || !Number.isFinite(markup) || markup < 0 ||
-      !process.env.LKR_PER_USD || !Number.isFinite(lkrPerUsd) || lkrPerUsd <= 0) {
+  if (!process.env.LKR_PER_USD || !Number.isFinite(lkrPerUsd) || lkrPerUsd <= 0) {
     throw new BookingPricingError("Pricing settings are missing. Contact the travel office.");
   }
 
-  const route =
-    await calculateRoadRoute(
-      routeLocations
-    );
-
-  const billableKilometres = route.actualKilometres + 20;
-  const totalAmount = Math.ceil(((billableKilometres * vehicleRatePerKm + markup) / lkrPerUsd) * 100) / 100;
-
-  if (!Number.isFinite(totalAmount) || totalAmount <= 0 || totalAmount > 99999999.99) {
-    throw new BookingPricingError("The calculated price is outside the supported range. Contact the travel office.");
+  if (!Number.isSafeInteger(driverBattaPerDayLkr) || driverBattaPerDayLkr <= 0) {
+    throw new BookingPricingError("Driver batta is not configured for this vehicle. Please contact the travel office.");
   }
+
+  const route = await calculateRoadRoute(routeLocations);
+  let price: ReturnType<typeof calculateFare>;
+  try {
+    price = calculateFare({
+      serviceType,
+      actualKilometres: route.actualKilometres,
+      numberOfDays,
+      vehicleRatePerKm,
+      driverBattaPerDayLkr,
+      lkrPerUsd,
+    });
+  } catch (error) {
+    throw new BookingPricingError(error instanceof Error ? error.message : "Unable to calculate tour price.");
+  }
+  const { billableKilometres, totalAmount } = price;
   return {
     totalAmount,
 

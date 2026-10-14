@@ -101,12 +101,14 @@ test("cross-origin profile mutation does not change data", async () => {
   assert.equal((await (await call("/api/auth/me", "GET", undefined, adminCookie)).json()).user.fullName, "Updated Admin");
 });
 test("vehicle validation prevents negative rates and valid CRUD persists", async () => {
-  const vehicle = { model: "Test Van", passengers: 5, luggage: 3, transmission: "Automatic", fuelType: "Diesel", description: "Test", status: "active", rate: "-100", imageUrl: "" };
+  const vehicle = { model: "Test Van", passengers: 5, luggage: 3, transmission: "Automatic", fuelType: "Diesel", description: "Test", status: "active", rate: "-100", driverBattaPerDayLkr: 1800, imageUrl: "" };
   assert.equal((await call("/api/admin/vehicles", "POST", vehicle, adminCookie)).status, 400);
   const created = await call("/api/admin/vehicles", "POST", { ...vehicle, rate: "Rs. 150/km" }, adminCookie);
   assert.equal(created.status, 201); const { vehicle: saved } = await created.json();
   const list = await (await call("/api/admin/vehicles", "GET", undefined, adminCookie)).json();
   assert.equal(list.vehicles.some((v: { dbId: number }) => v.dbId === saved.dbId), true);
+  assert.equal(saved.driverBattaPerDayLkr, 1800);
+  assert.equal((await call(`/api/admin/vehicles/${saved.dbId}`, "PATCH", { ...vehicle, rate: "Rs. 150/km", driverBattaPerDayLkr: -1 }, adminCookie)).status, 400);
   assert.equal((await call(`/api/admin/vehicles/${saved.dbId}`, "DELETE", undefined, adminCookie)).status, 200);
 });
 test("public forms reject bad data and hide unmoderated feedback", async () => {
@@ -128,7 +130,7 @@ test("booking creation computes price and never overwrites an existing guest pro
   const response = await call("/api/bookings", "POST", booking);
   assert.equal(response.status, 201, await response.clone().text());
   const body = await response.json();
-  assert.equal(body.booking.totalAmount, 16); // ((10 km + 20 km) * 150 + 300) / 300
+  assert.equal(body.booking.totalAmount, 65); // Airport: (110 km * Rs. 150 + Rs. 1800) / 300, rounded up to $5.
   const retried = await call("/api/bookings", "POST", booking);
   assert.equal(retried.status, 200); assert.equal((await retried.json()).booking.id, body.booking.id);
   assert.equal(body.booking.status, "PENDING");
@@ -136,7 +138,7 @@ test("booking creation computes price and never overwrites an existing guest pro
   const receipt = await call(`/api/booking-confirmation?booking=${body.booking.id}&token=${body.confirmationToken}`);
   assert.equal(receipt.status, 200);
   const receiptBody = (await receipt.json()).booking;
-  assert.equal(receiptBody.totalAmount, 16);
+  assert.equal(receiptBody.totalAmount, 65);
   assert.equal(receiptBody.paymentStatus, "UNPAID");
   assert.equal(receiptBody.vehicleName, "Fixture Vehicle");
   assert.equal(receiptBody.customer, undefined);
@@ -195,6 +197,9 @@ test("day and round tours save destinations and validate matching overnight date
     const saved = await response.json();
     const receipt = await (await call(`/api/booking-confirmation?booking=${saved.booking.id}&token=${saved.confirmationToken}`)).json();
     assert.deepEqual(receipt.booking.destinations, data.destinations);
+    // Test map returns 10 km and the fixture vehicle has 150 LKR/km,
+    // 1800 LKR/day batta, and a 300 LKR/USD exchange rate.
+    assert.equal(receipt.booking.totalAmount, serviceType === "DAY_TOUR" ? 65 : 95);
     assert.equal(receipt.booking.paymentStatus, "UNPAID");
   }
   assert.equal((await call("/api/bookings", "POST", { ...payload, serviceType: "ROUND_TOUR", returnDate, numberOfNights: 10 })).status, 400);

@@ -369,6 +369,8 @@ async function handlePOST(request: Request) {
       waypoints:
         serviceType === "AIRPORT_TRANSFER" ? [] : destinations,
       vehicleRatePerKm,
+      driverBattaPerDayLkr: Number(vehicle.driverBattaPerDayLkr),
+      numberOfDays: serviceType === "ROUND_TOUR" ? Number(numberOfNights) + 1 : 1,
     });
 
     const totalAmount = calculatedPrice.totalAmount;

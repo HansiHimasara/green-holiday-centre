@@ -72,9 +72,11 @@ async function handlePOST(
       );
 
     const waypoints =
-      readWaypoints(
-        body.waypoints
-      );
+      readWaypoints(body.waypoints);
+    // The Round Tour UI stores one destination per overnight stop.
+    // Consistent with /api/bookings, the day count is nights + 1.
+    const numberOfNights = body.numberOfNights === undefined || body.numberOfNights === null
+      ? null : Number(body.numberOfNights);
 
     /* ==========================================
        VALIDATION
@@ -169,6 +171,12 @@ async function handlePOST(
       );
     }
 
+    if (serviceType === "ROUND_TOUR" &&
+        (!Number.isInteger(numberOfNights) || numberOfNights !== waypoints.length ||
+         numberOfNights < 1 || numberOfNights > 30)) {
+      return NextResponse.json({ error: "Round Tour nights must match the overnight destinations." }, { status: 400 });
+    }
+
     /* ==========================================
        GET VEHICLE FROM DATABASE
     ========================================== */
@@ -256,6 +264,8 @@ async function handlePOST(
             : waypoints,
 
         vehicleRatePerKm,
+        driverBattaPerDayLkr: Number(vehicle.driverBattaPerDayLkr),
+        numberOfDays: serviceType === "ROUND_TOUR" ? Number(numberOfNights) + 1 : 1,
       });
 
     return NextResponse.json({

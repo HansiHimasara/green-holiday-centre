@@ -146,6 +146,7 @@ model VehicleType {
   passengerCapacity   Int
   luggageCapacity     Int
   ratePerKm           Int           @default(0)
+  driverBattaPerDayLkr Int          @default(0)
 
   transmission        String?
   fuelType            String?

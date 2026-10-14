@@ -1,4 +1,4 @@
-import { parseVehicleRate } from "@/src/server/http/validation";
+import { parseVehicleRate, parseDriverBatta } from "@/src/server/http/validation";
 import { withApi } from "@/src/server/http/guard";
 import { NextResponse } from "next/server";
 
@@ -122,9 +122,10 @@ async function handlePATCH(
       ).toUpperCase();
 
     const rate = parseVehicleRate(body.rate);
+    const driverBatta = parseDriverBatta(body.driverBattaPerDayLkr);
     const photo = String(body.imageUrl ?? "").trim();
-    if (!Number.isInteger(rate) || rate <= 0 || (photo && !/^https:\/\/[^\s]+$/.test(photo) && !/^\/images\/[^\s]+$/.test(photo))) {
-      return NextResponse.json({ error: "Enter a positive whole-number LKR/km rate and a valid HTTPS photo URL." }, { status: 400 });
+    if (!Number.isInteger(rate) || rate <= 0 || !Number.isInteger(driverBatta) || driverBatta <= 0 || (photo && !/^https:\/\/[^\s]+$/.test(photo) && !/^\/images\/[^\s]+$/.test(photo))) {
+      return NextResponse.json({ error: "Enter a positive whole-number LKR/km rate, a positive daily driver batta (LKR), and a valid HTTPS photo URL." }, { status: 400 });
     }
     if (!name) {
       return NextResponse.json(
@@ -239,7 +240,8 @@ async function handlePATCH(
               body.description
             ),
 
-          ratePerKm: parseVehicleRate(body.rate),
+          ratePerKm: rate,
+          driverBattaPerDayLkr: driverBatta,
           imageUrl: optionalText(body.imageUrl),
           status,
         });
@@ -296,6 +298,7 @@ async function handlePATCH(
           "",
 
         rate: `Rs. ${updatedVehicle.ratePerKm}/km`,
+        driverBattaPerDayLkr: updatedVehicle.driverBattaPerDayLkr,
         imageUrl: updatedVehicle.imageUrl ?? "",
 
         status:

@@ -17,6 +17,13 @@ export function parseVehicleRate(value: unknown) {
   const rate = Number(text.replace(/^Rs\.\s*/i, "").replace(/\s*\/km$/i, ""));
   return Number.isSafeInteger(rate) && rate > 0 && rate <= 1000000 ? rate : NaN;
 }
+export function parseDriverBatta(value: unknown) {
+  if (typeof value !== "number" && typeof value !== "string") return NaN;
+  const valueText = String(value).trim();
+  if (!/^\d+$/.test(valueText)) return NaN;
+  const amount = Number(valueText);
+  return Number.isSafeInteger(amount) && amount > 0 && amount <= 1000000 ? amount : NaN;
+}
 export function validateBody(body: unknown, path: string) {
   if (!isRecord(body)) throw new HttpError(400, "Send a JSON object.");
   const limits: Record<string, number> = {

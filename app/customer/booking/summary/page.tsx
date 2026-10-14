@@ -156,7 +156,7 @@ export default function BookingSummaryPage() {
     );
   }, []);
 
-  const { serviceType, vehicleTypeId, pickupLocation, dropoffLocation, destinations } = draft || {};
+  const { serviceType, vehicleTypeId, pickupLocation, dropoffLocation, destinations, numberOfNights } = draft || {};
 
   useEffect(() => {
     if (!serviceType) {
@@ -195,6 +195,7 @@ export default function BookingSummaryPage() {
                     dropoffLocation:
                       dropoffLocation,
                     waypoints,
+                    numberOfNights: serviceType === "ROUND_TOUR" ? numberOfNights : undefined,
                   }
                 ),
             }
@@ -283,6 +284,7 @@ export default function BookingSummaryPage() {
     pickupLocation,
     dropoffLocation,
     destinations,
+    numberOfNights,
   ]);
 
   if (!draft) {

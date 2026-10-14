@@ -34,7 +34,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'66dbaa1688e43f90f4ef11cf9b62a87b013bbf62565b9a7ae56a6739f43e5b27'>;
+  StorageHashBase<'41908f752a303e5eff1c9fa223b63fa3ee6006653758ac28c2de23314c721046'>;
 export type ExecutionHash =
   ExecutionHashBase<'4a2275a714614d4fb10c5905b72ddaef973f651a44f4e86f0e384bf22db79bde'>;
 export type ProfileHash =
@@ -371,6 +371,7 @@ export type FieldOutputTypes = {
       readonly passengerCapacity: CodecTypes['pg/int4@1']['output'];
       readonly luggageCapacity: CodecTypes['pg/int4@1']['output'];
       readonly ratePerKm: CodecTypes['pg/int4@1']['output'];
+      readonly driverBattaPerDayLkr: CodecTypes['pg/int4@1']['output'];
       readonly transmission: CodecTypes['pg/text@1']['output'] | null;
       readonly fuelType: CodecTypes['pg/text@1']['output'] | null;
       readonly airConditioning: CodecTypes['pg/bool@1']['output'];
@@ -514,6 +515,7 @@ export type FieldInputTypes = {
       readonly passengerCapacity: CodecTypes['pg/int4@1']['input'];
       readonly luggageCapacity: CodecTypes['pg/int4@1']['input'];
       readonly ratePerKm: CodecTypes['pg/int4@1']['input'];
+      readonly driverBattaPerDayLkr: CodecTypes['pg/int4@1']['input'];
       readonly transmission: CodecTypes['pg/text@1']['input'] | null;
       readonly fuelType: CodecTypes['pg/text@1']['input'] | null;
       readonly airConditioning: CodecTypes['pg/bool@1']['input'];
@@ -656,6 +658,7 @@ export type StorageColumnTypes = {
       readonly chauffeurLanguage: CodecTypes['pg/text@1']['output'] | null;
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['output'];
       readonly description: CodecTypes['pg/text@1']['output'] | null;
+      readonly driverBattaPerDayLkr: CodecTypes['pg/int4@1']['output'];
       readonly fuelType: CodecTypes['pg/text@1']['output'] | null;
       readonly id: CodecTypes['pg/int4@1']['output'];
       readonly imageUrl: CodecTypes['pg/text@1']['output'] | null;
@@ -799,6 +802,7 @@ export type StorageColumnInputTypes = {
       readonly chauffeurLanguage: CodecTypes['pg/text@1']['input'] | null;
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
       readonly description: CodecTypes['pg/text@1']['input'] | null;
+      readonly driverBattaPerDayLkr: CodecTypes['pg/int4@1']['input'];
       readonly fuelType: CodecTypes['pg/text@1']['input'] | null;
       readonly id: CodecTypes['pg/int4@1']['input'];
       readonly imageUrl: CodecTypes['pg/text@1']['input'] | null;
@@ -872,6 +876,7 @@ export namespace Models {
     passengerCapacity: CodecTypes['pg/int4@1']['output'];
     luggageCapacity: CodecTypes['pg/int4@1']['output'];
     ratePerKm: CodecTypes['pg/int4@1']['output'];
+    driverBattaPerDayLkr: CodecTypes['pg/int4@1']['output'];
     transmission: CodecTypes['pg/text@1']['output'] | null;
     fuelType: CodecTypes['pg/text@1']['output'] | null;
     airConditioning: CodecTypes['pg/bool@1']['output'];
@@ -1891,6 +1896,15 @@ type ContractBase = Omit<
                   readonly nullable: false;
                 };
                 readonly ratePerKm: {
+                  readonly nativeType: 'int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
+                  };
+                };
+                readonly driverBattaPerDayLkr: {
                   readonly nativeType: 'int4';
                   readonly codecId: 'pg/int4@1';
                   readonly nullable: false;
@@ -2927,6 +2941,10 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
               };
+              readonly driverBattaPerDayLkr: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
               readonly transmission: {
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
@@ -2993,6 +3011,7 @@ type ContractBase = Omit<
                 readonly passengerCapacity: { readonly column: 'passengerCapacity' };
                 readonly luggageCapacity: { readonly column: 'luggageCapacity' };
                 readonly ratePerKm: { readonly column: 'ratePerKm' };
+                readonly driverBattaPerDayLkr: { readonly column: 'driverBattaPerDayLkr' };
                 readonly transmission: { readonly column: 'transmission' };
                 readonly fuelType: { readonly column: 'fuelType' };
                 readonly airConditioning: { readonly column: 'airConditioning' };
