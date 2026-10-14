@@ -52,7 +52,7 @@ export default function PaymentPage() {
     const bookingId = params.get("booking");
     const token = params.get("token");
     if (!bookingId || !token) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- No asynchronous payment-link lookup is needed.
+
       setLoading(false);
       return;
     }
