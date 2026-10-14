@@ -163,29 +163,52 @@ export default function AdminVehiclesPage() {
   const handleSave = async () => {
     if (!editingVehicle) return;
 
-    if (
-      !editingVehicle.id.trim() ||
-      !editingVehicle.model.trim() ||
-      editingVehicle.passengers < 1 ||
-      editingVehicle.luggage < 0 ||
-      !editingVehicle.transmission.trim() ||
-      !editingVehicle.fuelType.trim() ||
-      !editingVehicle.description.trim() ||
-      !editingVehicle.rate.trim()
-    ) {
+    // Show which field needs attention instead of silently returning.
+    const missingFields: string[] = [];
+    if (!editingVehicle.id.trim()) missingFields.push("Vehicle ID");
+    if (!editingVehicle.model.trim()) missingFields.push("Vehicle Name");
+    if (!Number.isInteger(editingVehicle.passengers) || editingVehicle.passengers < 1) {
+      missingFields.push("Passengers (minimum 1)");
+    }
+    if (!Number.isInteger(editingVehicle.luggage) || editingVehicle.luggage < 0) {
+      missingFields.push("Luggage (minimum 0)");
+    }
+    if (!editingVehicle.transmission.trim()) missingFields.push("Transmission");
+    if (!editingVehicle.fuelType.trim()) missingFields.push("Fuel Type");
+    if (!editingVehicle.description.trim()) missingFields.push("Description");
+    if (!editingVehicle.rate.trim()) missingFields.push("Base Rate");
+
+    if (missingFields.length) {
+      window.alert(`Please correct these vehicle fields: ${missingFields.join(", ")}.`);
       return;
     }
 
-    const response = await fetch(`/api/admin/vehicles${editingVehicle.dbId ? `/` + editingVehicle.dbId : ""}`, {
-      method: editingId && editingVehicle.dbId ? "PATCH" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(editingVehicle),
-    });
-    if (!response.ok) { window.alert((await response.json()).error || "Save failed."); return; }
-    await reload();
+    const url = `/api/admin/vehicles${editingVehicle.dbId ? `/${editingVehicle.dbId}` : ""}`;
+    try {
+      const response = await fetch(url, {
+        method: editingId && editingVehicle.dbId ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editingVehicle),
+      });
 
-    setEditingId(null);
-    setEditingVehicle(null);
+      if (!response.ok) {
+        const payload: unknown = await response.json().catch(() => null);
+        const message =
+          payload && typeof payload === "object" && "error" in payload &&
+          typeof payload.error === "string"
+            ? payload.error
+            : "Save failed. Check the server terminal for details.";
+        window.alert(`Vehicle could not be saved (HTTP ${response.status}): ${message}`);
+        return;
+      }
+
+      await reload();
+      setEditingId(null);
+      setEditingVehicle(null);
+    } catch (error) {
+      console.error("Vehicle save failed:", error);
+      window.alert("Unable to save vehicle. Check the connection and try again.");
+    }
   };
 
   /* ==========================================
@@ -564,6 +587,7 @@ export default function AdminVehiclesPage() {
                             options={
                               transmissionOptions
                             }
+                            placeholder="Select transmission"
                             onChange={(value) =>
                               updateEditingField(
                                 "transmission",
@@ -592,6 +616,7 @@ export default function AdminVehiclesPage() {
                             options={
                               fuelTypeOptions
                             }
+                            placeholder="Select fuel type"
                             onChange={(value) =>
                               updateEditingField(
                                 "fuelType",
@@ -858,12 +883,14 @@ export default function AdminVehiclesPage() {
 interface StyledSelectProps {
   value: string;
   options: string[];
+  placeholder?: string;
   onChange: (value: string) => void;
 }
 
 function StyledSelect({
   value,
   options,
+  placeholder,
   onChange,
 }: StyledSelectProps) {
   return (
@@ -875,6 +902,11 @@ function StyledSelect({
         }
         className={selectClasses}
       >
+        {placeholder && (
+          <option value="" disabled>
+            {placeholder}
+          </option>
+        )}
         {options.map((option) => (
           <option
             key={option}

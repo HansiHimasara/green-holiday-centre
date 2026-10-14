@@ -14,6 +14,11 @@ import {
 
 export const runtime = "nodejs";
 
+// Valid scrypt fixture, never associated with any account. Keeps unknown-account
+// and disabled-account logins from skipping the expensive password check.
+const DUMMY_PASSWORD_HASH =
+  "scrypt$16384$8$1$00000000000000000000000000000000$b57d5ca40054af3629f6069c0de68f04323986ea387354e9c5ccdcd28dff6497ba0942c3d73b49c474c0e0207bb4e1d45c222b2f967f6b820a99e4f5d9920db4";
+
 async function handlePOST(
   request: Request
 ) {
@@ -71,6 +76,7 @@ async function handlePOST(
         .first();
 
     if (!user || user.status !== "ACTIVE" || !["ADMIN", "SUPER_ADMIN"].includes(user.role)) {
+      await verifyPassword(password, DUMMY_PASSWORD_HASH);
       return NextResponse.json(
         {
           error:

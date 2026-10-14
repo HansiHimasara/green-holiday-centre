@@ -70,7 +70,7 @@ async function handlePOST(
     }
 
     // Only active administrator accounts can reset passwords
-    if (user.status !== "ACTIVE") {
+    if (user.status !== "ACTIVE" || !["ADMIN", "SUPER_ADMIN"].includes(user.role)) {
       return NextResponse.json({
         message:
           "If an administrator account exists for this email, a password reset link has been sent.",
