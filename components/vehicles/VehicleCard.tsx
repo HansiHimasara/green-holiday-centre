@@ -43,6 +43,7 @@ export default function VehicleCard({
           unoptimized
           alt={name}
           fill
+          sizes="(min-width: 1280px) 390px, (min-width: 768px) 50vw, 100vw"
           className="object-cover"
         />
 
