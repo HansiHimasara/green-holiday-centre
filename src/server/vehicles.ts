@@ -1,9 +1,10 @@
 import { db } from "@/src/prisma/db";
 
-export function vehicleCategory(name: string): "Sedan" | "SUV" | "Bus" | "Other" {
+export function vehicleCategory(name: string): "Sedan" | "SUV" | "Mini Van" | "Bus" | "Other" {
   if (/sedan|saloon/i.test(name)) return "Sedan";
   if (/suv|jeep|4x4/i.test(name)) return "SUV";
   if (/bus|coach|minibus/i.test(name)) return "Bus";
+  if (/\b(?:van|minivan|vito)\b|flat[\s-]*roof/i.test(name)) return "Mini Van";
   return "Other";
 }
 
