@@ -28,7 +28,7 @@ export async function sendBookingEmail(details: BookingEmail, confirmed = false)
   });
   const lines = [
     `Hello ${details.name},`,
-    confirmed ? "Your payment has been verified and your booking is confirmed." : "Your reservation request has been received. Payment is UNPAID. Online payment is not available yet; contact Green Holiday Centre to arrange payment.",
+    confirmed ? "Your payment has been verified and your booking is confirmed." : "Your reservation request has been received. Payment is currently UNPAID. You may pay through the secure payment link or contact Green Holiday Centre for other arrangements.",
     `Booking: ${details.reference}`,
     `Service: ${details.service}`,
     `Travel date: ${details.travelDate}`,

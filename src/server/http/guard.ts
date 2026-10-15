@@ -52,7 +52,7 @@ export function withApi<T extends (...args: never[]) => Promise<Response>>(handl
         const { getCurrentUser } = await import("../auth/session");
         authorize(await getCurrentUser(), path.startsWith("/api/admin/users"));
       }
-      if (request && ["POST", "PATCH", "PUT"].includes(request.method) && !["/api/auth/logout", "/api/cron/cancel-unpaid", "/api/booking-payment"].includes(path)) {
+      if (request && ["POST", "PATCH", "PUT"].includes(request.method) && !["/api/auth/logout", "/api/cron/cancel-unpaid", "/api/cron/reconcile-payments", "/api/booking-payment"].includes(path)) {
         // Validate a clone before a handler can coerce input or change the database.
         const body = await readJson(request.clone());
         validateBody(body, path);

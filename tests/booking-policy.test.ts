@@ -19,7 +19,7 @@ test("payment link cannot be reused for another booking or email", () => {
   assert.equal(verifyPaymentLink(15, "other@example.com", token), false);
 });
 
-test("receipt links are scoped to a booking and cannot authorize payment", () => {
+test("receipt links are scoped to the booking and do not validate as unrelated email links", () => {
   process.env.BOOKING_LINK_SECRET = "a-secret-with-at-least-thirty-two-characters";
   const token = receiptToken(7, "GH-EXAMPLE");
   assert.equal(verifyReceiptToken(7, "GH-EXAMPLE", token), true);
