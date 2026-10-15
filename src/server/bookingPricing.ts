@@ -94,7 +94,7 @@ async function fetchWithTimeout(
    GEOCODE LOCATION
 ========================================================= */
 
-async function geocodeLocation(
+async function geocodeWithPhoton(
   location: string
 ): Promise<Coordinate> {
   const cleanLocation =
@@ -133,7 +133,7 @@ async function geocodeLocation(
           cache:
             "no-store",
         },
-        15000
+        8000
       );
   } catch (error) {
     console.error(
@@ -203,6 +203,48 @@ async function geocodeLocation(
   ];
 }
 
+// Keep quoting available when the public Photon service is unreachable.
+// Both quote and booking creation use this same server-side lookup.
+async function geocodeLocation(location: string): Promise<Coordinate> {
+  const cleanLocation = location.trim();
+  if (!cleanLocation) throw new BookingPricingError("A route location is missing.");
+  try {
+    return await geocodeWithPhoton(cleanLocation);
+  } catch {
+    const key = process.env.OPENROUTESERVICE_API_KEY?.trim();
+    if (key) {
+      const params = new URLSearchParams({
+        text: cleanLocation,
+        "boundary.country": "LKA",
+        size: "1",
+      });
+      try {
+        const response = await fetchWithTimeout(
+          `https://api.openrouteservice.org/geocode/search?${params}`,
+          { headers: { Authorization: key }, cache: "no-store" },
+          8000,
+        );
+        if (response.ok) {
+          const data = await response.json() as PhotonResponse;
+          const point = data.features?.[0]?.geometry?.coordinates;
+          if (point && point.length === 2 &&
+              point.every(value => typeof value === "number" && Number.isFinite(value)) &&
+              point[0] >= 79.5 && point[0] <= 82 && point[1] >= 5.8 && point[1] <= 10) {
+            return point;
+          }
+        }
+        console.warn("Backup geocoder could not resolve location; HTTP status:", response.status);
+      } catch {
+        // Do not log requests or credentials from the authenticated provider.
+        console.warn("Backup geocoder request failed.");
+      }
+    }
+    throw new BookingPricingError(
+      `Unable to locate "${cleanLocation}". Please retry or select a more specific Sri Lankan pickup/drop-off location.`,
+    );
+  }
+}
+
 /* =========================================================
    ROAD ROUTE
 ========================================================= */
@@ -212,7 +254,7 @@ async function calculateRoadRoute(
 ) {
   const apiKey =
     process.env
-      .OPENROUTESERVICE_API_KEY;
+      .OPENROUTESERVICE_API_KEY?.trim();
 
   if (!apiKey) {
     throw new BookingPricingError(
