@@ -1,6 +1,16 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Keep saved database URLs and bookmarks working after removing duplicate files.
+  async redirects() {
+    return [
+      "comfort-sedan", "family-van", "luxury-suv", "premium-sedan", "touring-van",
+    ].map((name) => ({
+      source: `/images/${name}.png`,
+      destination: `/images/vehicles/${name}.png`,
+      permanent: true,
+    }));
+  },
   async headers() {
     return [{ source: "/:path*", headers: [
       { key: "X-Content-Type-Options", value: "nosniff" },
