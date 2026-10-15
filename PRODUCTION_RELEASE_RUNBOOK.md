@@ -19,7 +19,7 @@ HTTPS endpoint and its exact source SHA. Do not switch FTP upload back on to "ma
    schema from CI or by guessing SQL. See `DATABASE_SCHEMA_RELEASE_CHECK.md`.
 3. Set secrets on the **server** (never in a public FTP directory): `DATABASE_URL`,
    `BOOKING_LINK_SECRET`, `CRON_SECRET`, `APP_BASE_URL`, `OPENROUTESERVICE_API_KEY`,
-   `LKR_PER_USD`, SMTP settings and a verified proxy/rate-limiting setup. When TRUST_PROXY=false, the app
+   `EXCHANGE_RATE_API_KEY` (optionally `LKR_PER_USD` as fallback), SMTP settings and a verified proxy/rate-limiting setup. When TRUST_PROXY=false, the app
    does **not** invent a shared "local" client IP; you must have an upstream
    per-IP rate limiter. Set TRUST_PROXY=true only if the proxy overrides, rather
    than appends to, the untrusted X-Forwarded-For header.

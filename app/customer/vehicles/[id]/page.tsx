@@ -26,8 +26,9 @@ export default async function VehicleDetailsPage({ params }: { params: Promise<{
   const { id } = await params;
   const vehicleId = Number(id);
   if (!Number.isInteger(vehicleId) || vehicleId < 1) notFound();
-  const row = await db.orm.public.VehicleType.where({ id: vehicleId, status: "ACTIVE" }).first();
+  const row = await db.orm.public.VehicleType.where({ id: vehicleId }).first();
   if (!row) notFound();
+  const available = row.status === "ACTIVE";
   const vehicle = {
     name: row.name,
     category: vehicleCategory(row.name),
@@ -62,7 +63,7 @@ export default async function VehicleDetailsPage({ params }: { params: Promise<{
 
           <div className="mx-auto w-full max-w-[1180px] px-8 md:px-10">
             {/* MAIN VEHICLE CARD */}
-            <div className="group overflow-hidden rounded-2xl border border-[var(--border-light)] bg-white shadow-[0_18px_50px_rgba(7,91,69,0.08)] transition-[transform,box-shadow] duration-500 ease-out hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(7,91,69,0.13)]">
+            <div className={`group overflow-hidden rounded-2xl border border-[var(--border-light)] bg-white shadow-[0_18px_50px_rgba(7,91,69,0.08)] transition-[transform,box-shadow] duration-500 ease-out ${available ? "hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(7,91,69,0.13)]" : "opacity-70 saturate-50"}`}>
               <div className="grid lg:grid-cols-[1.08fr_1fr]">
                 {/* VEHICLE IMAGE */}
                 <div className="relative min-h-[340px] overflow-hidden bg-[var(--surface-soft)] md:min-h-[470px]">
@@ -73,7 +74,7 @@ export default async function VehicleDetailsPage({ params }: { params: Promise<{
                     fill
                     priority
                     sizes="(min-width: 1024px) 55vw, 100vw"
-                    className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.02]"
+                    className={`object-cover transition-transform duration-700 ease-out ${available ? "group-hover:scale-[1.02]" : ""}`}
                   />
 
                   {/* Category Badge */}
@@ -82,6 +83,12 @@ export default async function VehicleDetailsPage({ params }: { params: Promise<{
                       {vehicle.category}
                     </span>
                   </div>
+
+                  {!available && (
+                    <span className="absolute right-5 top-5 rounded-full bg-[#304F5F] px-4 py-2 text-xs font-bold uppercase tracking-widest text-white shadow-sm">
+                      Unavailable
+                    </span>
+                  )}
 
                   {/* Image Bottom Accent */}
                   <div className="absolute bottom-0 left-0 right-0 h-2 bg-[var(--green-primary)]" />
@@ -156,16 +163,18 @@ export default async function VehicleDetailsPage({ params }: { params: Promise<{
 
                   {/* BUTTONS */}
                   <div className="mt-8 flex flex-wrap gap-3">
-                    <Button
-                      href={row.ratePerKm > 0 ? `/customer/booking/airport-transfer?vehicle=${row.id}` : "/customer/contact"}
-                      className="
-                        min-w-[175px]
-                        !bg-[var(--green-dark)]
-                        hover:!bg-[var(--green-forest)]
-                      "
-                    >
-                      {row.ratePerKm > 0 ? "Book This Vehicle" : "Contact for a Quote"}
-                    </Button>
+                    {available ? (
+                      <Button
+                        href={row.ratePerKm > 0 ? `/customer/booking/airport-transfer?vehicle=${row.id}` : "/customer/contact"}
+                        className="min-w-[175px] !bg-[var(--green-dark)] hover:!bg-[var(--green-forest)]"
+                      >
+                        {row.ratePerKm > 0 ? "Book This Vehicle" : "Contact for a Quote"}
+                      </Button>
+                    ) : (
+                      <span role="status" className="inline-flex min-w-[175px] cursor-not-allowed items-center justify-center rounded-md bg-gray-200 px-6 py-3 text-[13px] font-semibold text-gray-600">
+                        Currently Unavailable
+                      </span>
+                    )}
 
                     <Button
                       href="/customer/vehicles"
