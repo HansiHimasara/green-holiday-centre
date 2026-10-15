@@ -69,11 +69,11 @@ export default function Footer() {
             </h3>
 
             <div className="space-y-2.5 text-sm">
-              <p>42 Galle Road, Colombo 03, Sri Lanka</p>
+              <p>62/3, Muhandiram E D Dabre Mawatha, Colombo 00500</p>
 
               <a
                 href="mailto:info@greenholiday.lk"
-                className="transition-colors hover:text-white"
+                className="transition-colors hover:!text-[var(--green-light)] focus-visible:!text-[var(--green-light)]"
               >
                 info@greenholiday.lk
               </a>
@@ -112,7 +112,11 @@ function FooterLink({
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={active ? "font-semibold text-[var(--yellow-golden)] underline underline-offset-4" : "transition-colors hover:text-white hover:underline"}
+      className={`transition-colors duration-200 hover:!text-[var(--green-light)] focus-visible:!text-[var(--green-light)] hover:underline ${
+        active
+          ? "font-semibold text-[var(--yellow-golden)] underline underline-offset-4"
+          : "text-white/75"
+      }`}
     >
       {children}
     </Link>
