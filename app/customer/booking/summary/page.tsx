@@ -533,7 +533,10 @@ export default function BookingSummaryPage() {
       currentDraft.customer;
 
     if (currentDraft.bookingId && currentDraft.bookingReference) {
-      router.push(currentDraft.confirmationToken ? `/customer/booking/confirmation?booking=${currentDraft.bookingId}&token=${encodeURIComponent(currentDraft.confirmationToken)}` : "/customer/booking/confirmation");
+      const destination = nextPage === "payment" ? "payment" : "confirmation";
+      router.push(currentDraft.confirmationToken
+        ? `/customer/booking/${destination}?booking=${currentDraft.bookingId}&token=${encodeURIComponent(currentDraft.confirmationToken)}`
+        : "/customer/booking/confirmation");
       return;
     }
 
@@ -604,7 +607,7 @@ export default function BookingSummaryPage() {
                     bookingCurrency,
 
                   requestId,
-                  reservationOnly: nextPage !== "payment",
+                  reservationOnly: true, // No live gateway: every new booking remains unpaid.
                   customer: {
                     fullName:
                       customer.fullName,
@@ -698,7 +701,8 @@ export default function BookingSummaryPage() {
           savedCurrency,
       });
 
-      router.push(`/customer/booking/confirmation?booking=${data.booking.id}&token=${encodeURIComponent(data.confirmationToken)}`);
+      const destination = nextPage === "payment" ? "payment" : "confirmation";
+      router.push(`/customer/booking/${destination}?booking=${data.booking.id}&token=${encodeURIComponent(data.confirmationToken)}`);
     } catch (error) {
       console.error(
         "Booking submission error:",
@@ -1000,7 +1004,7 @@ export default function BookingSummaryPage() {
                         ? "Please Wait..."
                         : quoteLoading
                           ? "Calculating..."
-                          : "Submit & View Confirmation"}
+                          : "Continue to Payment Details"}
                     </Button>
                 </div>
               </div>

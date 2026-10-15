@@ -581,7 +581,7 @@ export default function RoundTourPage() {
     }
 
     if (draft.travelDate) {
-       
+
       setStartDate(
         draft.travelDate
       );

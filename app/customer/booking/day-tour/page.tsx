@@ -518,7 +518,7 @@ export default function DayTourPage() {
     }
 
     if (draft.travelDate) {
-       
+
       setTourDate(
         draft.travelDate
       );
