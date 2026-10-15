@@ -20,6 +20,10 @@ async function handlePOST(request: Request) {
   let cancelled = 0;
   for (const booking of bookings) {
     if (booking.paymentStatus !== "PAID" && booking.travelDate <= cutoff) {
+      // Never auto-cancel a booking while a gateway attempt might have captured funds.
+      // Reconcile unresolved gateway attempts before cancelling the reservation.
+      const attempts = await db.orm.public.Payment.where({ bookingId: booking.id, status: "PENDING" }).all();
+      if (attempts.length > 0) continue;
       const updated = await db.orm.public.Booking.where({ id: booking.id, status: "PENDING", paymentStatus: booking.paymentStatus }).update({ status: "CANCELLED" });
       if (updated) cancelled++;
     }

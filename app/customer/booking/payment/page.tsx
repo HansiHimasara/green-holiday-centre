@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { apiFetch } from "@/src/client/apiFetch";
 import BookingPageShell from "@/components/bookings/BookingPageShell";
@@ -8,9 +8,8 @@ import BookingStepHeader from "@/components/bookings/BookingStepHeader";
 import ServiceTabs from "@/components/bookings/ServiceTabs";
 import DecorativePattern from "@/components/ui/DecorativePattern";
 
-// Payment-page fields are a frontend structure only. No card collection or payment
-// processing is enabled. A future payment provider must receive booking amounts
-// exclusively from a verified server-side payment-session creation endpoint.
+// Card details are entered only at the Mastercard-hosted bank page.
+// The payment API calculates the amount from the saved booking on the server.
 
 type PaymentBooking = {
   bookingId: number;
@@ -32,12 +31,50 @@ const fieldClass =
   "w-full rounded-xl border border-[#D8E5DD] bg-[#F7FAF8] px-4 py-3 text-[14px] text-[#164A38] outline-none focus:border-[#2777A0] focus:ring-2 focus:ring-[#2777A0]/15 disabled:opacity-70";
 const labelClass = "mb-2 block text-[12px] font-bold text-[#184B3C]";
 
+type CheckoutSession = {
+  sessionId: string;
+  orderId: string;
+  checkoutScriptUrl: string;
+};
+
+declare global {
+  interface Window {
+    Checkout?: {
+      configure: (options: { session: { id: string } }) => void | Promise<void>;
+      showPaymentPage: () => void | Promise<void>;
+    };
+  }
+}
+
+async function loadMastercardScript(src: string): Promise<void> {
+  const url = new URL(src);
+  if (url.protocol !== "https:" || !/(?:^|[.-])gateway\.mastercard\.com$/.test(url.hostname) ||
+      url.pathname !== "/static/checkout/checkout.min.js" || url.search || url.hash) {
+    throw new Error("The payment gateway returned an unexpected checkout script URL.");
+  }
+  if (window.Checkout) return;
+  await new Promise<void>((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => {
+      script.remove();
+      reject(new Error("The bank-hosted payment page could not be loaded."));
+    };
+    document.head.appendChild(script);
+  });
+}
+
 export default function PaymentPage() {
   const [booking, setBooking] = useState<PaymentBooking | null>(null);
   const [receiptEmail, setReceiptEmail] = useState("");
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState("");
   const [confirmationHref, setConfirmationHref] = useState<string | null>(null);
+  const [isOpening, setIsOpening] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
+  const inFlight = useRef(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -103,8 +140,47 @@ if (!id || !token) {
   const isCancelled = booking?.status === "CANCELLED";
   const amount = booking ? booking.totalAmount.toFixed(2) : "";
 
-  function handlePreviewSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); // No gateway connection is configured yet.
+  async function handlePreviewSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!booking || isPaid || isCancelled || booking.paymentStatus === "PENDING" || inFlight.current) return;
+    const token = new URLSearchParams(window.location.search).get("token");
+    if (!token || !/^[A-Za-z0-9_-]{43}$/.test(token)) {
+      setPaymentError("The payment link is invalid. Open this page from your booking confirmation.");
+      return;
+    }
+    inFlight.current = true;
+    setPaymentError("");
+    setIsOpening(true);
+    try {
+      const response = await apiFetch("/api/booking-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ booking: booking.bookingId, token }),
+      });
+      const data: unknown = await response.json();
+      if (!response.ok) {
+        const message = typeof data === "object" && data !== null && "error" in data &&
+          typeof data.error === "string" ? data.error : "Could not begin secure checkout.";
+        throw new Error(message);
+      }
+      if (typeof data !== "object" || data === null || !("sessionId" in data) ||
+          !("orderId" in data) || !("checkoutScriptUrl" in data) ||
+          typeof data.sessionId !== "string" || !data.sessionId ||
+          typeof data.orderId !== "string" || !data.orderId ||
+          typeof data.checkoutScriptUrl !== "string" || !data.checkoutScriptUrl) {
+        throw new Error("The payment gateway returned an invalid checkout session.");
+      }
+      const checkoutSession = data as CheckoutSession;
+      await loadMastercardScript(checkoutSession.checkoutScriptUrl);
+      if (!window.Checkout) throw new Error("The Mastercard checkout library did not initialize.");
+      await window.Checkout.configure({ session: { id: checkoutSession.sessionId } });
+      await window.Checkout.showPaymentPage();
+      // The bank redirects to our result page for authenticated server-side verification.
+    } catch (error) {
+      setPaymentError(error instanceof Error ? error.message : "Secure payment checkout could not be opened.");
+      inFlight.current = false;
+      setIsOpening(false);
+    }
   }
 
   return (
@@ -137,9 +213,9 @@ if (!id || !token) {
             {fetchError ? <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{fetchError}</p> : null}
             {!loading && !fetchError && booking ? (
               <>
-                {/* A real HTML form matching the four requested invoice fields.
+                {/* Invoice fields for a secure Mastercard-hosted checkout.
                     All invoice values come from a receipt-token-verified server response.
-                    Nothing is posted to a payment gateway until one is integrated. */}
+                    The bank page receives the card data, not this website. */}
                 <form onSubmit={handlePreviewSubmit} className="space-y-5" autoComplete="on">
                   <div className="rounded-xl border border-[#D9E8DD] bg-[#F1F8F4] px-4 py-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -170,8 +246,8 @@ if (!id || !token) {
 
                   <div>
                     <label htmlFor="receiptEmail" className={labelClass}>Customer Email</label>
-                    <input id="receiptEmail" name="customer_receipt_email" type="email" value={receiptEmail} onChange={(event) => setReceiptEmail(event.target.value)} required maxLength={200} autoComplete="email" className={fieldClass} />
-                    <p className="mt-1.5 text-[11px] text-[#70867C]">For the future payment gateway. Editing this field does not change the saved booking.</p>
+                    <input id="receiptEmail" name="customer_receipt_email" type="email" value={receiptEmail} readOnly aria-readonly="true" required maxLength={200} autoComplete="email" className={fieldClass} />
+                    <p className="mt-1.5 text-[11px] text-[#70867C]">Payment receipts use the email on your saved reservation. Contact our office if it needs correcting.</p>
                   </div>
 
                   {isPaid ? (
@@ -180,17 +256,17 @@ if (!id || !token) {
                     <p role="status" className="rounded-lg bg-amber-50 px-4 py-3 text-sm font-semibold text-[#865716]">This reservation is cancelled or expired. Contact our office for assistance.</p>
                   ) : (
                     <p role="status" className="rounded-lg border-l-4 border-[#F2C94C] bg-[#FFF9E8] px-4 py-3 text-[12px] leading-5 text-[#785F23]">
-                      Online card payments are not available yet. This form is prepared for a future secure payment gateway. No charge will be made.
+                      {booking.paymentStatus === "PENDING" ? "A bank checkout is still pending. Please check its result or contact our team before trying again." : "Continue to your bank-hosted secure checkout. Card details are not entered on this website."}
                     </p>
                   )}
 
+                  {paymentError ? <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{paymentError}</p> : null}
                   <button
                     type="submit"
-                    disabled
-                    title="Payment gateway integration is pending"
-                    className="w-full cursor-not-allowed rounded-xl bg-[#0B6B4B] px-6 py-4 text-[14px] font-bold text-white opacity-60"
+                    disabled={isOpening || isPaid || isCancelled || booking.paymentStatus === "PENDING"}
+                    className="w-full rounded-xl bg-[#0B6B4B] px-6 py-4 text-[14px] font-bold text-white transition hover:bg-[#075338] disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {isPaid ? "Payment Already Recorded" : "Pay Now — Gateway Coming Soon"}
+                    {isPaid ? "Payment Already Recorded" : isOpening ? "Opening secure checkout…" : "Pay Securely with Card"}
                   </button>
                 </form>
 
