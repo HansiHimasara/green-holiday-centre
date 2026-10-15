@@ -1,5 +1,6 @@
 import { validAirportTransfer } from "../shared/airports";
 import { calculateFare } from "./pricingFormula";
+import { getLkrPerUsd } from "./exchangeRate";
 export class BookingPricingError extends Error {}
 
 export type BookingPricingServiceType =
@@ -500,9 +501,12 @@ export async function calculateBookingPrice({
     ];
   }
 
-  const lkrPerUsd = Number(process.env.LKR_PER_USD);
-  if (!process.env.LKR_PER_USD || !Number.isFinite(lkrPerUsd) || lkrPerUsd <= 0) {
-    throw new BookingPricingError("Pricing settings are missing. Contact the travel office.");
+  // Resolve USD->LKR on the server. Both quotes and saved bookings use this path.
+  let lkrPerUsd: number;
+  try {
+    lkrPerUsd = await getLkrPerUsd();
+  } catch {
+    throw new BookingPricingError("The exchange rate is temporarily unavailable. Please try again later.");
   }
 
   if (!Number.isSafeInteger(driverBattaPerDayLkr) || driverBattaPerDayLkr <= 0) {

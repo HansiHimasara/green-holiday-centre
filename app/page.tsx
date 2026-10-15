@@ -12,7 +12,7 @@ import DecorativePattern from "@/components/ui/DecorativePattern";
 import FeatureItem from "@/components/home/FeatureItem";
 import ScrollReveal from "@/components/ui/ScrollReveal";
 import HeroGallery from "@/components/home/HeroGallery";
-import { activeVehicles, vehicleCategory } from "@/src/server/vehicles";
+import { publicFleetVehicles, vehicleCategory } from "@/src/server/vehicles";
 
 const services = [
   {
@@ -39,9 +39,9 @@ const services = [
 ];
 
 export default async function HomePage() {
-  const vehicles = await activeVehicles();
+  const vehicles = await publicFleetVehicles();
   const featuredVehicles = (["Sedan", "SUV", "Bus"] as const).flatMap(category => vehicles.filter(vehicle => vehicleCategory(vehicle.name) === category).slice(0, 3)).map(vehicle => ({
-    name: vehicle.name, image: vehicle.imageUrl || "/images/vehicle-placeholder.svg", passengers: vehicle.passengerCapacity, bags: vehicle.luggageCapacity, href: `/customer/vehicles/${vehicle.id}`,
+    name: vehicle.name, image: vehicle.imageUrl || "/images/vehicle-placeholder.svg", passengers: vehicle.passengerCapacity, bags: vehicle.luggageCapacity, href: `/customer/vehicles/${vehicle.id}`, available: vehicle.status === "ACTIVE",
   }));
   return (
     <>
@@ -141,9 +141,10 @@ export default async function HomePage() {
         {/* FEATURED VEHICLES */}
         <section className="relative overflow-hidden py-20 md:py-24">
           <Image
-            src="/images/sri-lanka-cta.jpg"
+            src="/images/sri-lanka-cta.webp"
             alt=""
             fill
+            sizes="100vw"
             className="z-0 object-cover"
             aria-hidden="true"
           />
@@ -185,7 +186,7 @@ export default async function HomePage() {
                   {featuredVehicles.map((vehicle) => (
                     <Card
                       key={vehicle.name}
-                      className="group overflow-hidden border-[var(--border-light)] bg-white/95 p-0 transition-[transform,box-shadow,background-color] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-2 hover:bg-white hover:shadow-[0_22px_50px_rgba(0,0,0,0.22)]"
+                      className={`group relative overflow-hidden border-[var(--border-light)] bg-white/95 p-0 transition-[transform,box-shadow,background-color] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${vehicle.available ? "hover:-translate-y-2 hover:bg-white hover:shadow-[0_22px_50px_rgba(0,0,0,0.22)]" : "cursor-not-allowed opacity-60 saturate-50"}`}
                     >
                       <div className="relative h-[195px] w-full overflow-hidden bg-white">
                         <Image
@@ -193,9 +194,16 @@ export default async function HomePage() {
                           unoptimized
                           alt={vehicle.name}
                           fill
-                          className="object-cover transition-transform duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.035]"
+                          sizes="(min-width: 1280px) 390px, (min-width: 768px) 33vw, 100vw"
+                          className={`object-cover transition-transform duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] ${vehicle.available ? "group-hover:scale-[1.035]" : ""}`}
                         />
-                        <div className="absolute inset-0 bg-black/0 transition-colors duration-700 group-hover:bg-black/[0.03]" />
+                        {vehicle.available ? (
+                          <div className="absolute inset-0 bg-black/0 transition-colors duration-700 group-hover:bg-black/[0.03]" />
+                        ) : (
+                          <span className="absolute right-3 top-3 rounded-full bg-[#304F5F] px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                            Unavailable
+                          </span>
+                        )}
                       </div>
 
                       <div className="p-6">
@@ -215,12 +223,15 @@ export default async function HomePage() {
                           </div>
                         </div>
 
-                        <Button
-                          href={vehicle.href}
-                          className="mt-6 w-full py-3 transition-all duration-500 group-hover:bg-[var(--green-dark)]"
-                        >
-                          View Details
-                        </Button>
+                        {vehicle.available ? (
+                          <Button href={vehicle.href} className="mt-6 w-full py-3 transition-all duration-500 group-hover:bg-[var(--green-dark)]">
+                            View Details
+                          </Button>
+                        ) : (
+                          <span className="mt-6 flex w-full cursor-not-allowed items-center justify-center rounded-md border border-gray-300 bg-gray-200 px-6 py-3 text-[13px] font-semibold text-gray-600">
+                            Currently Unavailable
+                          </span>
+                        )}
                       </div>
                     </Card>
                   ))}
@@ -286,9 +297,10 @@ export default async function HomePage() {
         {/* FINAL CTA */}
         <section className="relative min-h-[440px] overflow-hidden">
           <Image
-            src="/images/sri-lanka-cta2.jpg"
+            src="/images/sri-lanka-cta2.webp"
             alt="Scenic Sri Lankan landscape"
             fill
+            sizes="100vw"
             className="object-cover"
           />
           <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,31,20,0.84)_0%,rgba(5,31,20,0.68)_45%,rgba(5,31,20,0.42)_100%)]" />

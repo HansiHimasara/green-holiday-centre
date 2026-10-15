@@ -66,6 +66,7 @@ export default function ServiceCards({
                 src={service.image}
                 alt={service.title}
                 fill
+                sizes="(min-width: 1280px) 390px, (min-width: 768px) 33vw, 100vw"
                 className="
                   object-cover
                   transition-transform

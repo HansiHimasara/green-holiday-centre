@@ -18,7 +18,7 @@ test("airport transfer uses the same distance and daily batta formula", () => {
   assert.deepEqual(calculateFare({ ...base, serviceType: "AIRPORT_TRANSFER", actualKilometres: 10 }),
     { billableKilometres: 110, totalAmount: 65 });
 });
-test("USD prices always round UP to a multiple of five", () => {
+test("USD prices always round up to a multiple of five", () => {
   for (const distance of [1, 10, 25, 50, 100, 150, 200]) {
     assert.equal(calculateFare({ ...base, actualKilometres: distance }).totalAmount % 5, 0);
   }
@@ -28,4 +28,13 @@ test("unconfigured driver batta blocks all quoting and invalid days fail", () =>
   assert.throws(() => calculateFare({ ...base, driverBattaPerDayLkr: 0 }), /batta/);
   assert.throws(() => calculateFare({ ...base, numberOfDays: 0 }), /Invalid/);
   assert.throws(() => calculateFare({ ...base, lkrPerUsd: 0 }), /Invalid/);
+});
+
+test("never rounds a billable USD value down", () => {
+  // Rs. 30,800 / 300 = $102.67 => $105.
+  assert.equal(calculateFare({ ...base, vehicleRatePerKm: 145 }).totalAmount, 105);
+  // Rs. 31,800 / 300 = $106 => $110, NOT $105.
+  assert.equal(calculateFare(base).totalAmount, 110);
+  // Exactly $105 stays $105 (no unnecessary extra $5).
+  assert.equal(calculateFare({ ...base, vehicleRatePerKm: 148.5 }).totalAmount, 105);
 });

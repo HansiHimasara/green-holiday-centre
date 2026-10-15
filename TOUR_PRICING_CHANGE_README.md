@@ -3,12 +3,12 @@
 ## What changed
 
 - Central pricing code: `src/server/bookingPricing.ts` and new testable formula `src/server/pricingFormula.ts`.
-- **Day tours and round tours:** `billableKm = 80 + actualRoadKm + (20 * days)`.
+- **All services (airport transfer, day tour, round tour):** `billableKm = 80 + actualRoadKm + (20 * days)`.
 - **LKR total:** `billableKm * vehicle.ratePerKm + days * vehicle.driverBattaPerDayLkr`.
-- **Customer USD total:** `ceil((totalLkr / LKR_PER_USD) / 5) * 5`.
+- **Customer USD total:** `ceil((totalLkr / lkrPerUsd) / 5) * 5`; `lkrPerUsd` comes from ExchangeRate-API when configured, otherwise an explicit fixed rate.
 - **Day tour:** 1 day. **Round tour:** `numberOfNights + 1` days; the existing app already requires nights to equal the number of overnight stops.
-- **Airport transfers:** continue to use `(actualRoadKm + 20) * vehicle.ratePerKm + AIRPORT_TRANSFER_MARKUP_LKR`, converted into USD. Airport USD totals are *also* rounded up to $5 increments.
-- Removed the use of `DAY_TOUR_MARKUP_LKR` and `ROUND_TOUR_MARKUP_LKR` in pricing. `LKR_PER_USD` and the airport markup are still required.
+- **Airport transfers:** use the same formula as all other services with 1 day. No separate airport markup is used.
+- The three legacy `*_MARKUP_LKR` environment variables are unused. Set `EXCHANGE_RATE_API_KEY` for a daily-updated rate, and optionally `LKR_PER_USD` as a manually approved fallback.
 - Admin > Vehicles includes an editable, required **Driver Batta (LKR/day)** field for every vehicle. The rate is NOT returned by the public `/api/vehicles` or `/api/booking-quote` routes.
 - Both quote and final booking endpoints obtain the rate and batta from the database, never from a customer's request.
 - Existing vehicles get the schema default of zero. Tours for a vehicle cannot be quoted until an admin supplies a positive daily batta for that vehicle.
@@ -29,7 +29,7 @@
 
 **This ZIP contains source code and the Prisma contract edit, but NOT an applied database migration.** The generated Prisma files (`src/prisma/contract.json` and `.d.ts`) are intentionally left at their original, unmodified versions. Let the actual Prisma CLI regenerate those files and its storage hash; never manually hand-edit the generated artifacts.
 
-1. Back up the database and work on a development database first. Set the existing project environment variables, especially `DATABASE_URL`, `OPENROUTESERVICE_API_KEY`, `LKR_PER_USD`, and `AIRPORT_TRANSFER_MARKUP_LKR`. Do not commit `.env`.
+1. Back up the database and work on a development database first. Set the existing project environment variables, especially `DATABASE_URL`, `OPENROUTESERVICE_API_KEY`, and `EXCHANGE_RATE_API_KEY` (or an approved `LKR_PER_USD` fallback). Do not commit `.env`.
 2. In your project folder, using Node >=22.18, run:
 
    ```bash
@@ -57,8 +57,10 @@ Prisma 8 expects the migration flow: **`contract emit` -> `migration plan` -> `d
 
 See https://www.prisma.io/docs/orm/migrations/how-migrations-work for the migration process.
 
+For live USD conversion instructions see `EXCHANGE_RATE_SETUP.md`.
+
 ## Tests and limitations
 
-- A standalone calculation test suite was run successfully: `node --experimental-strip-types --test tests/pricing-formula.test.mjs` (5 passing).
+- A standalone calculation test suite was run successfully: `npm test` (includes pricing formula tests).
 - All modified TypeScript/TSX/JavaScript source files were syntax checked.
 - The full Next.js build, end-to-end test suite, remote routing, and database migration **were not executed here** due to unavailable project dependencies, database credentials, and routing API access. They must be verified locally before deploy.

@@ -567,7 +567,8 @@ async function handlePOST(request: Request) {
 
     return NextResponse.json(
       { error: message },
-      { status: 400 },
+      // Unexpected DB/server faults are not mistakes in the customer input.
+      { status: error instanceof BookingPricingError ? 400 : 503 },
     );
   }
 }
