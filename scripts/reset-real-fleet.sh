@@ -7,10 +7,10 @@ if [[ "$mode" != "--preview" && "$mode" != "--apply" ]]; then
 fi
 : "${DATABASE_URL:?Set DATABASE_URL to the intended production PostgreSQL connection first}"
 command -v psql >/dev/null || { echo "Install PostgreSQL client tools (psql, pg_dump, pg_restore)." >&2; exit 1; }
-# PGDATABASE accepts a connection URI; keep credentials out of process arguments.
+# Pass the connection URI explicitly to PostgreSQL client tools.
 export PGDATABASE="$DATABASE_URL"
 unset DATABASE_URL
-psql -X -v ON_ERROR_STOP=1 <<'SQL'
+psql --dbname="$PGDATABASE" -X -v ON_ERROR_STOP=1 <<'SQL'
 SELECT current_database() AS database, current_user AS role;
 SELECT 'user (preserved)' AS table_name, count(*) FROM public."user"
 UNION ALL SELECT 'vehicleType', count(*) FROM public."vehicleType"
@@ -38,9 +38,9 @@ backup_dir="${FLEET_BACKUP_DIR:-$HOME/green-holiday-db-backups}"
 mkdir -p "$backup_dir"
 backup="$(mktemp "$backup_dir/before-real-fleet-$(date -u +%Y%m%dT%H%M%SZ)-XXXXXX")"
 echo "Creating private full database backup: $backup"
-if ! pg_dump --format=custom --file="$backup"; then
+if ! pg_dump --dbname="$PGDATABASE" --format=custom --file="$backup"; then
   echo "Backup failed. Database has NOT been reset." >&2; exit 1
 fi
 pg_restore --list "$backup" >/dev/null
-psql -X -v ON_ERROR_STOP=1 --file="$script_dir/reset-real-fleet.sql"
+psql --dbname="$PGDATABASE" -X -v ON_ERROR_STOP=1 --file="$script_dir/reset-real-fleet.sql"
 echo "Completed. User accounts retained; old sessions invalidated. Backup: $backup"
