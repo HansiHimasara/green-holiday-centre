@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { bookingServiceHref } from "@/src/client/bookingVehicleSelection";
 
 type ServiceType =
   | "airport-transfer"
@@ -7,6 +8,7 @@ type ServiceType =
 
 interface ServiceTabsProps {
   active: ServiceType;
+  vehicleId?: number | string | null;
 }
 
 const tabs: {
@@ -33,6 +35,7 @@ const tabs: {
 
 export default function ServiceTabs({
   active,
+  vehicleId,
 }: ServiceTabsProps) {
   return (
     <div className="flex flex-wrap gap-3">
@@ -42,7 +45,7 @@ export default function ServiceTabs({
         return (
           <Link
             key={tab.value}
-            href={tab.href}
+            href={bookingServiceHref(tab.href, vehicleId)}
             className={`
               group relative overflow-hidden
               rounded-md

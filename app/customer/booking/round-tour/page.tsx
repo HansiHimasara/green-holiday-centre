@@ -17,6 +17,7 @@ import BookingPageShell from "@/components/bookings/BookingPageShell";
 import BookingStepHeader from "@/components/bookings/BookingStepHeader";
 import ServiceTabs from "@/components/bookings/ServiceTabs";
 import ServiceColorDashes from "@/components/bookings/ServiceColorDashes";
+import { selectedVehicleFromSearch } from "@/src/client/bookingVehicleSelection";
 
 import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
@@ -563,8 +564,14 @@ export default function RoundTourPage() {
   ======================================================= */
 
   useEffect(() => {
-    const draft =
-      getBookingDraft();
+    const draft = getBookingDraft();
+    const requestedVehicle = selectedVehicleFromSearch(window.location.search);
+
+    if (requestedVehicle !== null) {
+      // Keep the selected vehicle when arriving from a different service.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Restore URL preference after hydration.
+      setSelectedVehicleId(requestedVehicle);
+    }
 
     if (
       draft.serviceType !==
@@ -574,7 +581,7 @@ export default function RoundTourPage() {
     }
 
     if (draft.travelDate) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronize browser-only draft/URL state after hydration.
+
       setStartDate(
         draft.travelDate
       );
@@ -588,20 +595,12 @@ export default function RoundTourPage() {
       );
     }
 
-    if (
-      draft.vehicleTypeId
-    ) {
-      setSelectedVehicleId(
-        draft.vehicleTypeId
-      );
+    if (requestedVehicle === null && draft.vehicleTypeId) {
+      setSelectedVehicleId(draft.vehicleTypeId);
     }
 
-    if (
-      draft.vehicleName
-    ) {
-      setVehicleSearch(
-        draft.vehicleName
-      );
+    if (requestedVehicle === null && draft.vehicleName) {
+      setVehicleSearch(draft.vehicleName);
     }
 
     if (
@@ -713,29 +712,23 @@ export default function RoundTourPage() {
           loadedVehicles
         );
 
-        const draft =
-          getBookingDraft();
+        const draft = getBookingDraft();
+        const requestedVehicle = selectedVehicleFromSearch(window.location.search);
+        const vehicleId = requestedVehicle ?? (
+          draft.serviceType === "ROUND_TOUR" ? draft.vehicleTypeId : null
+        );
 
-        if (
-          draft.serviceType ===
-            "ROUND_TOUR" &&
-          draft.vehicleTypeId
-        ) {
-          const savedVehicle =
-            loadedVehicles.find(
-              (vehicle) =>
-                vehicle.id ===
-                draft.vehicleTypeId
-            );
+        if (vehicleId) {
+          const savedVehicle = loadedVehicles.find(
+            (vehicle) => vehicle.id === vehicleId,
+          );
 
           if (savedVehicle) {
-            setSelectedVehicleId(
-              savedVehicle.id
-            );
-
-            setVehicleSearch(
-              savedVehicle.name
-            );
+            setSelectedVehicleId(savedVehicle.id);
+            setVehicleSearch(savedVehicle.name);
+          } else {
+            setSelectedVehicleId(null);
+            setVehicleSearch("");
           }
         }
       } catch (error) {
@@ -1203,7 +1196,7 @@ export default function RoundTourPage() {
           "
         >
           <div>
-            <ServiceTabs active="round-tour" />
+            <ServiceTabs active="round-tour" vehicleId={selectedVehicleId} />
           </div>
 
           <div className="mx-auto mt-12 max-w-[760px] text-center">
@@ -1252,7 +1245,7 @@ export default function RoundTourPage() {
               stays along your route.
             </p>
 
-            <ServiceColorDashes active="round-tour" />
+            <ServiceColorDashes active="round-tour" vehicleId={selectedVehicleId} />
           </div>
         </div>
       </section>

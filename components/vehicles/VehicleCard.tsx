@@ -8,6 +8,7 @@ interface VehicleCardProps {
   luggage: number;
   category: string;
   href: string;
+  available?: boolean;
 }
 
 export default function VehicleCard({
@@ -17,11 +18,14 @@ export default function VehicleCard({
   luggage,
   category,
   href,
+  available = true,
 }: VehicleCardProps) {
   return (
     <div
-      className="
+      data-vehicle-status={available ? "active" : "inactive"}
+      className={`
         group
+        relative
         overflow-hidden
         rounded-xl
         border
@@ -31,10 +35,10 @@ export default function VehicleCard({
         transition-[transform,box-shadow,background-color]
         duration-700
         ease-[cubic-bezier(0.22,1,0.36,1)]
-        hover:-translate-y-2
-        hover:bg-white
-        hover:shadow-[0_22px_50px_rgba(0,0,0,0.22)]
-      "
+        ${available
+          ? "hover:-translate-y-2 hover:bg-white hover:shadow-[0_22px_50px_rgba(0,0,0,0.22)]"
+          : "cursor-not-allowed opacity-60 saturate-50"}
+      `}
     >
       {/* Vehicle image */}
       <div className="relative h-[220px] w-full">
@@ -46,6 +50,12 @@ export default function VehicleCard({
           sizes="(min-width: 1280px) 390px, (min-width: 768px) 50vw, 100vw"
           className="object-cover"
         />
+
+        {!available && (
+          <span className="absolute right-4 top-4 rounded-full bg-[#304F5F] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-white shadow-sm">
+            Unavailable
+          </span>
+        )}
 
         {/* Category badge */}
         <span
@@ -119,12 +129,18 @@ export default function VehicleCard({
         </div>
 
         {/* Vehicle details page link */}
-        <Button
-          href={href}
-          className="mt-4 w-full"
-        >
-          View Details
-        </Button>
+        {available ? (
+          <Button href={href} className="mt-4 w-full">
+            View Details
+          </Button>
+        ) : (
+          <span
+            aria-label={`${name} is currently unavailable for booking`}
+            className="mt-4 flex w-full cursor-not-allowed items-center justify-center rounded-md border border-gray-300 bg-gray-200 px-6 py-3 text-[13px] font-semibold text-gray-600"
+          >
+            Currently Unavailable
+          </span>
+        )}
       </div>
     </div>
   );

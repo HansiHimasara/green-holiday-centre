@@ -17,6 +17,7 @@ import BookingPageShell from "@/components/bookings/BookingPageShell";
 import BookingStepHeader from "@/components/bookings/BookingStepHeader";
 import ServiceTabs from "@/components/bookings/ServiceTabs";
 import ServiceColorDashes from "@/components/bookings/ServiceColorDashes";
+import { selectedVehicleFromSearch } from "@/src/client/bookingVehicleSelection";
 
 import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
@@ -500,8 +501,14 @@ export default function DayTourPage() {
   ======================================================= */
 
   useEffect(() => {
-    const draft =
-      getBookingDraft();
+    const draft = getBookingDraft();
+    const requestedVehicle = selectedVehicleFromSearch(window.location.search);
+
+    if (requestedVehicle !== null) {
+      // Keep the selected vehicle when arriving from a different service.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Restore URL preference after hydration.
+      setSelectedVehicleId(requestedVehicle);
+    }
 
     if (
       draft.serviceType !==
@@ -511,7 +518,7 @@ export default function DayTourPage() {
     }
 
     if (draft.travelDate) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronize browser-only draft/URL state after hydration.
+
       setTourDate(
         draft.travelDate
       );
@@ -525,20 +532,12 @@ export default function DayTourPage() {
       );
     }
 
-    if (
-      draft.vehicleTypeId
-    ) {
-      setSelectedVehicleId(
-        draft.vehicleTypeId
-      );
+    if (requestedVehicle === null && draft.vehicleTypeId) {
+      setSelectedVehicleId(draft.vehicleTypeId);
     }
 
-    if (
-      draft.vehicleName
-    ) {
-      setVehicleSearch(
-        draft.vehicleName
-      );
+    if (requestedVehicle === null && draft.vehicleName) {
+      setVehicleSearch(draft.vehicleName);
     }
 
     if (
@@ -637,31 +636,23 @@ export default function DayTourPage() {
             loadedVehicles
           );
 
-          const draft =
-            getBookingDraft();
+          const draft = getBookingDraft();
+          const requestedVehicle = selectedVehicleFromSearch(window.location.search);
+          const vehicleId = requestedVehicle ?? (
+            draft.serviceType === "DAY_TOUR" ? draft.vehicleTypeId : null
+          );
 
-          if (
-            draft.serviceType ===
-              "DAY_TOUR" &&
-            draft.vehicleTypeId
-          ) {
-            const savedVehicle =
-              loadedVehicles.find(
-                (vehicle) =>
-                  vehicle.id ===
-                  draft.vehicleTypeId
-              );
+          if (vehicleId) {
+            const savedVehicle = loadedVehicles.find(
+              (vehicle) => vehicle.id === vehicleId,
+            );
 
-            if (
-              savedVehicle
-            ) {
-              setSelectedVehicleId(
-                savedVehicle.id
-              );
-
-              setVehicleSearch(
-                savedVehicle.name
-              );
+            if (savedVehicle) {
+              setSelectedVehicleId(savedVehicle.id);
+              setVehicleSearch(savedVehicle.name);
+            } else {
+              setSelectedVehicleId(null);
+              setVehicleSearch("");
             }
           }
         }
@@ -1061,7 +1052,7 @@ export default function DayTourPage() {
           "
         >
           <div>
-            <ServiceTabs active="day-tour" />
+            <ServiceTabs active="day-tour" vehicleId={selectedVehicleId} />
           </div>
 
           <div className="mx-auto mt-12 max-w-[760px] text-center">
@@ -1110,7 +1101,7 @@ export default function DayTourPage() {
               experienced chauffeur.
             </p>
 
-            <ServiceColorDashes active="day-tour" />
+            <ServiceColorDashes active="day-tour" vehicleId={selectedVehicleId} />
           </div>
         </div>
       </section>

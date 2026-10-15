@@ -27,6 +27,7 @@ import BookingPageShell from "@/components/bookings/BookingPageShell";
 import BookingStepHeader from "@/components/bookings/BookingStepHeader";
 import ServiceTabs from "@/components/bookings/ServiceTabs";
 import ServiceColorDashes from "@/components/bookings/ServiceColorDashes";
+import { selectedVehicleFromSearch } from "@/src/client/bookingVehicleSelection";
 
 import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
@@ -390,20 +391,14 @@ export default function AirportTransferPage() {
 
   // Restore existing booking details.
   useEffect(() => {
-    const requestedVehicle = new URLSearchParams(
-      window.location.search,
-    ).get("vehicle");
-
-    if (requestedVehicle && /^\d+$/.test(requestedVehicle)) {
-      const vehicleTypeId = Number(requestedVehicle);
-
-      saveBookingDraft({ vehicleTypeId });
-
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronize browser-only draft/URL state after hydration.
-      setSelectedVehicle(requestedVehicle);
-    }
-
+    const requestedVehicle = selectedVehicleFromSearch(window.location.search);
     const draft = getBookingDraft();
+
+    if (requestedVehicle !== null) {
+      // URL selection takes precedence over a saved draft from any service.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Restore URL preference after hydration.
+      setSelectedVehicle(String(requestedVehicle));
+    }
 
     if (draft.serviceType !== "AIRPORT_TRANSFER") {
       return;
@@ -425,11 +420,11 @@ export default function AirportTransferPage() {
       setDropLocation(draft.dropoffLocation);
     }
 
-    if (draft.vehicleTypeId) {
+    if (requestedVehicle === null && draft.vehicleTypeId) {
       setSelectedVehicle(String(draft.vehicleTypeId));
     }
 
-    if (draft.vehicleName) {
+    if (requestedVehicle === null && draft.vehicleName) {
       setVehicleSearch(draft.vehicleName);
     }
 
@@ -498,19 +493,23 @@ export default function AirportTransferPage() {
           setVehicles(loadedVehicles);
 
           const draft = getBookingDraft();
+          const requestedVehicle = selectedVehicleFromSearch(window.location.search);
+          const vehicleId = requestedVehicle ?? (
+            draft.serviceType === "AIRPORT_TRANSFER" ? draft.vehicleTypeId : null
+          );
 
-          if (
-            draft.serviceType === "AIRPORT_TRANSFER" &&
-            draft.vehicleTypeId
-          ) {
+          if (vehicleId) {
+            // Only restore an active vehicle returned by /api/vehicles.
             const savedVehicle = loadedVehicles.find(
-              (vehicle) =>
-                vehicle.id === String(draft.vehicleTypeId),
+              (vehicle) => vehicle.id === String(vehicleId),
             );
 
             if (savedVehicle) {
               setSelectedVehicle(savedVehicle.id);
               setVehicleSearch(savedVehicle.name);
+            } else {
+              setSelectedVehicle("");
+              setVehicleSearch("");
             }
           }
         }
@@ -741,7 +740,7 @@ export default function AirportTransferPage() {
 
         <div className="relative z-10 mx-auto w-full max-w-[1280px] px-6 pb-12 pt-10 md:px-10 md:pb-14 md:pt-12">
           <div>
-            <ServiceTabs active="airport-transfer" />
+            <ServiceTabs active="airport-transfer" vehicleId={selectedVehicle} />
           </div>
 
           <div className="mx-auto mt-12 max-w-[760px] text-center">
@@ -759,7 +758,7 @@ export default function AirportTransferPage() {
               arriving in or departing from Sri Lanka.
             </p>
 
-            <ServiceColorDashes active="airport-transfer" />
+            <ServiceColorDashes active="airport-transfer" vehicleId={selectedVehicle} />
           </div>
         </div>
       </section>

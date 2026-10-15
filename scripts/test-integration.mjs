@@ -17,7 +17,7 @@ const env = { ...process.env, DATABASE_URL: `postgresql://postgres:postgres@127.
   APP_BASE_URL: `http://127.0.0.1:${appPort}`, TEST_BASE_URL: `http://127.0.0.1:${appPort}`,
   TEST_DATABASE_ISOLATED: 'true', SMTP_HOST: '', SMTP_USER: '', SMTP_PASS: '',
   BOOKING_LINK_SECRET: 'isolated-integration-test-key-at-least-32-characters', CRON_SECRET: 'isolated-test-cron-key',
-  TRUST_PROXY: 'false', OPENROUTESERVICE_API_KEY: 'test-only', AIRPORT_TRANSFER_MARKUP_LKR: '300', DAY_TOUR_MARKUP_LKR: '300', ROUND_TOUR_MARKUP_LKR: '300', LKR_PER_USD: '300', NEXT_TELEMETRY_DISABLED: '1', DO_NOT_TRACK: '1',
+  TRUST_PROXY: 'false', OPENROUTESERVICE_API_KEY: 'test-only', AIRPORT_TRANSFER_MARKUP_LKR: '300', DAY_TOUR_MARKUP_LKR: '300', ROUND_TOUR_MARKUP_LKR: '300', LKR_PER_USD: '300', EXCHANGE_RATE_API_KEY: '', NEXT_TELEMETRY_DISABLED: '1', DO_NOT_TRACK: '1',
 };
 function run(args) {
   return new Promise((resolve, reject) => {

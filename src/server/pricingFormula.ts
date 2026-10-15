@@ -32,9 +32,9 @@ export function calculateFare(input: PriceFormulaInput) {
   const totalLkr = billableKilometres * vehicleRatePerKm +
     numberOfDays * driverBattaPerDayLkr;
   const rawUsd = totalLkr / lkrPerUsd;
-  // Round to the nearest USD 5 as specified by the fare policy.
-  // EPSILON avoids floating-point drift at exact half-step boundaries.
-  const totalAmount = Math.round(rawUsd / 5 + Number.EPSILON) * 5;
+  // Always round UP to the next whole USD 5, never down.
+  // A tiny epsilon avoids floating-point noise at exact USD 5 boundaries.
+  const totalAmount = Math.ceil(rawUsd / 5 - 1e-10) * 5;
   if (!Number.isFinite(totalAmount) || totalAmount <= 0 || totalAmount > 99999999.99) {
     throw new Error("The calculated price is outside the supported range.");
   }

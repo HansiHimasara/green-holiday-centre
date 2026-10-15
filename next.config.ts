@@ -1,28 +1,41 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Keep saved database URLs and bookmarks working after removing duplicate files.
   async redirects() {
     return [
-      "comfort-sedan", "family-van", "luxury-suv", "premium-sedan", "touring-van",
+      "comfort-sedan",
+      "family-van",
+      "luxury-suv",
+      "premium-sedan",
+      "touring-van",
     ].map((name) => ({
       source: `/images/${name}.png`,
       destination: `/images/vehicles/${name}.png`,
       permanent: true,
     }));
   },
+
   async headers() {
-    return [{ source: "/:path*", headers: [
-      { key: "X-Content-Type-Options", value: "nosniff" },
-      { key: "X-Frame-Options", value: "DENY" },
-      { key: "Referrer-Policy", value: "no-referrer" },
-      { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
-      { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
-      { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
-      ...(process.env.NODE_ENV === "production" ? [
-        { key: "Strict-Transport-Security", value: "max-age=31536000" },
-      ] : []),
-    ] }];
+    return [{
+      source: "/:path*",
+      headers: [
+        { key: "X-Content-Type-Options", value: "nosniff" },
+        { key: "X-Frame-Options", value: "DENY" },
+        { key: "Referrer-Policy", value: "no-referrer" },
+        {
+          key: "Permissions-Policy",
+          value: "camera=(), microphone=(), geolocation=()",
+        },
+        { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
+        { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
+        ...(process.env.NODE_ENV === "production"
+          ? [{
+              key: "Strict-Transport-Security",
+              value: "max-age=31536000",
+            }]
+          : []),
+      ],
+    }];
   },
 };
 

@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { bookingServiceHref } from "@/src/client/bookingVehicleSelection";
 
 interface ServiceColorDashesProps {
   active: "airport-transfer" | "day-tour" | "round-tour";
+  vehicleId?: number | string | null;
 }
 
 const services = [
@@ -24,6 +26,7 @@ const services = [
 
 export default function ServiceColorDashes({
   active,
+  vehicleId,
 }: ServiceColorDashesProps) {
   const pathname = usePathname();
 
@@ -57,7 +60,7 @@ export default function ServiceColorDashes({
         return (
           <Link
             key={service.key}
-            href={service.href}
+            href={bookingServiceHref(service.href, vehicleId)}
             aria-label={`Go to ${service.key.replace("-", " ")}`}
             className="flex items-center"
           >

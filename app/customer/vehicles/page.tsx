@@ -6,11 +6,11 @@ import PageTitle from "@/components/common/PageTitle";
 import VehicleFilters from "@/components/vehicles/VehicleFilters";
 import VehicleCard from "@/components/vehicles/VehicleCard";
 import DecorativePattern from "@/components/ui/DecorativePattern";
-import { activeVehicles, vehicleCategory } from "@/src/server/vehicles";
+import { publicFleetVehicles, vehicleCategory } from "@/src/server/vehicles";
 
 export default async function VehiclesPage({ searchParams }: { searchParams: Promise<{ category?: string; passengers?: string; luggage?: string }> }) {
   const filters = await searchParams;
-  const rows = await activeVehicles();
+  const rows = await publicFleetVehicles();
   const vehicles = rows.filter(vehicle => {
     const category = vehicleCategory(vehicle.name);
     const matchesCategory = !filters.category || category.toLowerCase() === filters.category.toLowerCase();
@@ -19,7 +19,7 @@ export default async function VehiclesPage({ searchParams }: { searchParams: Pro
     return matchesCategory && vehicle.passengerCapacity >= passengerRange[0] && vehicle.passengerCapacity <= passengerRange[1]
       && vehicle.luggageCapacity >= luggageRange[0] && vehicle.luggageCapacity <= luggageRange[1];
   }).map(vehicle => ({
-    name: vehicle.name, image: vehicle.imageUrl || "/images/vehicle-placeholder.svg", passengers: vehicle.passengerCapacity, luggage: vehicle.luggageCapacity, category: vehicleCategory(vehicle.name), href: `/customer/vehicles/${vehicle.id}`,
+    name: vehicle.name, image: vehicle.imageUrl || "/images/vehicle-placeholder.svg", passengers: vehicle.passengerCapacity, luggage: vehicle.luggageCapacity, category: vehicleCategory(vehicle.name), href: `/customer/vehicles/${vehicle.id}`, available: vehicle.status === "ACTIVE",
   }));
   return (
     <>
@@ -85,6 +85,7 @@ export default async function VehiclesPage({ searchParams }: { searchParams: Pro
                 luggage={vehicle.luggage}
                 category={vehicle.category}
                 href={vehicle.href}
+                available={vehicle.available}
               />
             ))}
           </div>
