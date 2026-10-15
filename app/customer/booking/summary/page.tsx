@@ -607,7 +607,7 @@ export default function BookingSummaryPage() {
                     bookingCurrency,
 
                   requestId,
-                  reservationOnly: true, // No live gateway: every new booking remains unpaid.
+                  reservationOnly: true, // Guest booking starts UNPAID; hosted checkout verifies payment separately.
                   customer: {
                     fullName:
                       customer.fullName,
@@ -948,7 +948,7 @@ export default function BookingSummaryPage() {
                 <span>
                   {isRoundTour
                     ? "I confirm that the details above are correct and I agree to submit this reservation request."
-                    : "I confirm that the details above are correct and I agree to submit this unpaid reservation request."}
+                    : "I confirm the details are correct and agree to continue to payment or submit an unpaid reservation."}
                 </span>
               </label>
 
@@ -1004,7 +1004,7 @@ export default function BookingSummaryPage() {
                         ? "Please Wait..."
                         : quoteLoading
                           ? "Calculating..."
-                          : "Continue to Payment Details"}
+                          : "Continue to Secure Payment"}
                     </Button>
                 </div>
               </div>

@@ -32,6 +32,7 @@ function label(value: string) {
 export default function BookingConfirmationPage() {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [error, setError] = useState("");
+  const [paymentHref, setPaymentHref] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -39,6 +40,8 @@ export default function BookingConfirmationPage() {
 
     const id = params.get("booking");
     const token = params.get("token");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Query is browser-only, read after hydration.
+    setPaymentHref(`/customer/booking/payment?${new URLSearchParams({ booking: id || "", token: token || "" })}`);
 
     async function load() {
       try {
@@ -84,6 +87,8 @@ export default function BookingConfirmationPage() {
 
   const heading = !booking
     ? ""
+    : booking.status === "PENDING" && booking.paymentStatus === "PAID"
+    ? "Payment Received!"
     : ({
         PENDING: "Booking Received!",
         CONFIRMED: "Booking Confirmed!",
@@ -170,7 +175,9 @@ export default function BookingConfirmationPage() {
                 </h2>
 
                 <p className="mt-1 text-[13px] text-[var(--text-secondary)]">
-                  Thank you for choosing Green Holiday.
+                  {booking.paymentStatus === "PAID"
+                    ? "Your payment was verified. Our team will manage the booking status."
+                    : "Your reservation is recorded, but payment has not been received."}
                 </p>
               </div>
 
@@ -287,8 +294,24 @@ export default function BookingConfirmationPage() {
                 </div>
               </div>
 
+              {/* PAYMENT STATE: pending reservation is not a successful card transaction. */}
+              <div role="status" className={`mt-5 rounded-xl border p-4 text-center text-sm ${booking.paymentStatus === "PAID" ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-amber-50 text-amber-900"}`}>
+                {booking.paymentStatus === "PAID"
+                  ? "Payment successfully verified with the bank."
+                  : booking.paymentStatus === "PENDING"
+                    ? "Your payment is still being processed. Please check your bank result before trying again."
+                    : booking.status === "CANCELLED"
+                      ? "This booking is cancelled. Contact our team for assistance."
+                      : "Payment has not been received. You may pay securely online."}
+              </div>
               {/* ACTION BUTTONS */}
               <div className="mt-5 flex flex-wrap justify-center gap-3">
+                {paymentHref && booking.paymentStatus !== "PAID" && booking.paymentStatus !== "PENDING" && booking.status !== "CANCELLED" && booking.status !== "COMPLETED" && (
+                  <Button href={paymentHref}
+                    className="min-w-[140px] !bg-[#0B6B4B] !text-white hover:!bg-[#075338]">
+                    Pay Securely
+                  </Button>
+                )}
                 <Button
                   href="/"
                   className="

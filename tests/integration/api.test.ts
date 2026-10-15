@@ -123,8 +123,9 @@ test("public forms reject bad data and hide unmoderated feedback", async () => {
   assert.equal((await call("/api/feedback", "POST", { fullName: "Guest", email: "guest@example.test", rating: 5, message: "Integration feedback" })).status, 201);
   const feedback = await (await call("/api/feedback")).json(); assert.equal(feedback.feedback.length, 0);
 });
-test("unconfigured gateway never accepts a browser-paid status", async () => {
-  assert.equal((await call("/api/booking-payment", "POST", { booking: 1, paymentStatus: "PAID" })).status, 503);
+test("payment gateway rejects browser-paid status and arbitrary amount", async () => {
+  assert.equal((await call("/api/booking-payment", "POST", { booking: 1, paymentStatus: "PAID" })).status, 400);
+  assert.equal((await call("/api/booking-payment", "POST", { booking: 1, amount: "0.01" })).status, 400);
 });
 test("booking creation computes price and never overwrites an existing guest profile", async () => {
   const vehicles = await (await call("/api/admin/vehicles", "GET", undefined, adminCookie)).json();

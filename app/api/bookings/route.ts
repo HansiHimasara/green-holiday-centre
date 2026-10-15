@@ -489,7 +489,7 @@ async function handlePOST(request: Request) {
       );
 
       const paymentLink =
-        `${baseUrl}/customer/booking/confirmation` +
+        `${baseUrl}/customer/booking/payment` +
         `?booking=${result.booking.id}` +
         `&token=${encodeURIComponent(token)}`;
 
