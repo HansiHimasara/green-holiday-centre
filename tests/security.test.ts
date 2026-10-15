@@ -55,6 +55,20 @@ test("malformed JSON is a 400 response and handler is never called", async () =>
   const response = await handler(new Request("http://localhost/api/contact", { method: "POST", headers: { "content-type": "application/json" }, body: "{" }));
   assert.equal(response.status, 400); assert.equal(called, false);
 });
+test("bodyless scheduler POST requests reach the reconciliation route handler", async () => {
+  let invoked = false;
+  const handler = withApi(async (_request: Request) => {
+    void _request;
+    invoked = true;
+    return Response.json({ checked: 0 });
+  }, "/api/cron/reconcile-payments");
+  const response = await handler(new Request("https://travel.example/api/cron/reconcile-payments", {
+    method: "POST",
+    headers: { authorization: "Bearer example-test-value" },
+  }));
+  assert.equal(response.status, 200);
+  assert.equal(invoked, true);
+});
 test("request parser refuses oversized bodies", async () => {
   await assert.rejects(readJson(new Request("http://localhost/api/contact", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message: "a".repeat(70000) }) })), (e: unknown) => e instanceof HttpError && e.status === 413);
 });
@@ -71,12 +85,12 @@ test("fetch metadata rejects sibling-subdomain mutation attempts", () => {
   }));
 });
 test("payment endpoint never treats a browser card submission as paid", async () => {
-  // Static contract check: intentionally no card capture or payment callback until a
-  // contracted provider and verified server-to-server payment notification exist.
+  // Hosted Checkout captures card details; the application itself never stores them.
   const { readFileSync } = await import("node:fs");
   const paymentRoute = readFileSync(new URL("../app/api/booking-payment/route.ts", import.meta.url), "utf8");
   const paymentPage = readFileSync(new URL("../app/customer/booking/payment/page.tsx", import.meta.url), "utf8");
-  assert.match(paymentRoute, /status: 503/);
+  assert.match(paymentRoute, /verifyReceiptToken/);
+  assert.match(paymentRoute, /gatewayConfig/);
   assert.doesNotMatch(paymentRoute, /\.update\(\{\s*paymentStatus:\s*["']PAID/);
   assert.doesNotMatch(paymentPage, /name=["'](?:cardNumber|cvv|cvc|expiry)["']/i);
 });

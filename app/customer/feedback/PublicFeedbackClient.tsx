@@ -123,15 +123,110 @@ export default function PublicFeedbackClient({ initialReviews }: { initialReview
           </div>
         </section>
 
-        {reviews.length > 0 && <section className="mx-auto w-full max-w-[850px] px-8 pb-14 md:px-10">
-          <h2 className="mb-6 font-serif text-2xl font-semibold text-[var(--green-dark)]">Traveller Reviews</h2>
-          <div className="grid gap-4">
-            {reviews.map(review => <article key={review.id} className="rounded-2xl border border-[var(--border-light)] bg-white p-6 shadow-sm">
-              <p className="font-semibold text-[var(--green-dark)]">{review.fullName} · {review.rating}/5</p>
-              <p className="mt-3 text-sm text-[var(--text-secondary)]">{review.message}</p>
-            </article>)}
+        
+{/* Traveller Reviews */}
+{reviews.length > 0 && (
+  <section className="relative mx-auto w-full max-w-6xl px-6 pb-20 pt-8 md:px-8">
+    <div className="mb-9 text-center">
+      <p className="mb-2 text-sm font-semibold tracking-[0.2em] text-[var(--green-primary)] uppercase">
+        Memories from our travellers
+      </p>
+
+      <h2 className="font-serif text-3xl font-bold text-[var(--green-dark)] md:text-4xl">
+        Traveller Reviews
+      </h2>
+
+      <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-[var(--text-secondary)] md:text-base">
+        Every journey has a story. Here are some kind words from
+        travellers who explored Sri Lanka with us.
+      </p>
+
+      <div className="mx-auto mt-5 flex w-fit items-center gap-1.5">
+        <span className="h-1 w-7 rounded-full bg-[var(--green-primary)]" />
+        <span className="h-1 w-7 rounded-full bg-[var(--yellow-golden)]" />
+        <span className="h-1 w-7 rounded-full bg-[var(--sky-blue)]" />
+      </div>
+    </div>
+
+    <div className="grid grid-cols-1 items-start gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      {reviews.map((review, index) => (
+        <article
+          key={review.id}
+          className={`group relative overflow-hidden rounded-[2rem] border p-6 shadow-[0_8px_30px_rgba(7,91,69,0.06)] transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_18px_40px_rgba(7,91,69,0.12)] ${
+            index % 3 === 0
+              ? "rotate-[-1deg] border-[#DDE9D9] bg-[#EEF5EA] hover:rotate-0"
+              : index % 3 === 1
+                ? "mt-3 rotate-[1deg] border-[#EEE5CC] bg-[#FBF5E6] hover:rotate-0"
+                : "rotate-[-0.5deg] border-[#DDE9D9] bg-[#F2F7F0] hover:rotate-0"
+          }`}
+        >
+          {/* Decorative quotation mark */}
+          <span
+            aria-hidden="true"
+            className="absolute right-5 top-2 font-serif text-6xl leading-none text-[var(--green-primary)] opacity-20"
+          >
+            “
+          </span>
+
+          {/* Traveller details */}
+          <div className="relative flex items-center gap-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-white bg-white/80 text-xl shadow-sm">
+              <span aria-hidden="true">🌿</span>
+            </div>
+
+            <div className="min-w-0">
+              <h3 className="truncate pr-5 font-semibold text-[var(--green-dark)]">
+                {review.fullName}
+              </h3>
+
+              {/* Star rating */}
+              <div
+                className="mt-1 flex items-center gap-0.5"
+                role="img"
+                aria-label={`${review.rating} out of 5 stars`}
+              >
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <span
+                    key={star}
+                    aria-hidden="true"
+                    className={`text-xl leading-none ${
+                      star <= review.rating
+                        ? "text-[#E7AD32]"
+                        : "text-[#D6D8CF]"
+                    }`}
+                  >
+                    ★
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
-        </section>}
+
+          {/* Review message */}
+          <div className="relative mt-5">
+            <p className="whitespace-pre-line break-words text-sm leading-7 text-[var(--text-secondary)]">
+              {review.message}
+            </p>
+          </div>
+
+          {/* Bottom decorative detail */}
+          <div className="mt-5 flex items-center justify-between border-t border-[var(--green-primary)]/10 pt-4">
+            <span className="text-xs font-medium text-[var(--green-dark)]/65">
+              A traveller's story
+            </span>
+            <span
+              aria-hidden="true"
+              className="text-lg text-[var(--green-primary)]/60"
+            >
+              ✿
+            </span>
+          </div>
+        </article>
+      ))}
+    </div>
+  </section>
+)}
+
 
         {/* ==========================================
             DECORATIVE PATTERN — BOTTOM LEFT

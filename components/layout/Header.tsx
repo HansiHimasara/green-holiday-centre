@@ -88,10 +88,10 @@ export default function Header() {
 
           <div className="flex items-center justify-end">
             <a
-              href="tel:+94771234567"
+              href="tel:+94768884714"
               className="hidden whitespace-nowrap rounded-md bg-[var(--green-primary)] px-5 py-3 text-[13px] font-bold !text-white transition-colors hover:bg-[var(--green-deep)] lg:inline-flex"
             >
-              Bookings: +94 77 123 4567
+              Bookings: +94 76 888 4714
             </a>
 
             {/* Mobile three dash button */}
@@ -132,10 +132,10 @@ export default function Header() {
             ))}
 
             <a
-              href="tel:+94771234567"
+              href="tel:+94768884714"
               className="mt-3 rounded-md bg-[var(--green-primary)] px-4 py-3 text-center text-sm font-bold !text-white"
             >
-              Bookings: +94 77 123 4567
+              Bookings: +94 76 888 4714
             </a>
           </nav>
         )}
