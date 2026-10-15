@@ -1,7 +1,11 @@
 import "dotenv/config";
 import { db } from "../src/prisma/db";
-const required = ["DATABASE_URL", "APP_BASE_URL", "BOOKING_LINK_SECRET", "OPENROUTESERVICE_API_KEY", "LKR_PER_USD", "SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM"];
+const required = ["DATABASE_URL", "APP_BASE_URL", "BOOKING_LINK_SECRET", "OPENROUTESERVICE_API_KEY", "SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM"];
 for (const name of required) console.log(`${name}: ${process.env[name] ? "configured" : "MISSING"}`);
+const manual = Number(process.env.LKR_PER_USD);
+const validManual = Boolean(process.env.LKR_PER_USD?.trim()) && Number.isFinite(manual) && manual > 0;
+console.log(`Exchange rate: ${process.env.EXCHANGE_RATE_API_KEY?.trim() ? "API key configured" : validManual ? "manual LKR_PER_USD configured" : "MISSING"}`);
+console.log(`Manual FX fallback: ${validManual ? "configured" : "not configured"}`);
 try {
   // This real read also verifies the Prisma contract marker; it does not change data.
   await db.orm.public.User.first();
