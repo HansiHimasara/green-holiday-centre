@@ -40,7 +40,7 @@ const services = [
 
 export default async function HomePage() {
   const vehicles = await publicFleetVehicles();
-  const featuredVehicles = (["Sedan", "SUV", "Bus"] as const).flatMap(category => vehicles.filter(vehicle => vehicleCategory(vehicle.name) === category).slice(0, 3)).map(vehicle => ({
+  const featuredVehicles = (["Sedan", "SUV", "Mini Van", "Bus"] as const).flatMap(category => vehicles.filter(vehicle => vehicleCategory(vehicle.name) === category).slice(0, 3)).map(vehicle => ({
     name: vehicle.name, image: vehicle.imageUrl || "/images/vehicle-placeholder.svg", passengers: vehicle.passengerCapacity, bags: vehicle.luggageCapacity, href: `/customer/vehicles/${vehicle.id}`, available: vehicle.status === "ACTIVE",
   }));
   return (

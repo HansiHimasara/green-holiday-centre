@@ -13,7 +13,7 @@ export default async function VehiclesPage({ searchParams }: { searchParams: Pro
   const rows = await publicFleetVehicles();
   const vehicles = rows.filter(vehicle => {
     const category = vehicleCategory(vehicle.name);
-    const matchesCategory = !filters.category || category.toLowerCase() === filters.category.toLowerCase();
+    const matchesCategory = !filters.category || category.toLowerCase().replace(/\s+/g, "") === filters.category.toLowerCase().replace(/\s+/g, "");
     const passengerRange = filters.passengers === "1-4" ? [1, 4] : filters.passengers === "5-9" ? [5, 9] : filters.passengers === "10+" ? [10, Infinity] : [0, Infinity];
     const luggageRange = filters.luggage === "1-3" ? [1, 3] : filters.luggage === "4-6" ? [4, 6] : filters.luggage === "7+" ? [7, Infinity] : [0, Infinity];
     return matchesCategory && vehicle.passengerCapacity >= passengerRange[0] && vehicle.passengerCapacity <= passengerRange[1]

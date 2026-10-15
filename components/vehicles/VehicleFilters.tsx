@@ -51,7 +51,7 @@ export default function VehicleFilters() {
                 options={[
                   { label: "Sedan", value: "sedan" },
                   { label: "SUV", value: "suv" },
-                  { label: "Minivan", value: "minivan" },
+                  { label: "Mini Van", value: "minivan" },
                   { label: "Bus", value: "bus" },
                 ]}
               />
