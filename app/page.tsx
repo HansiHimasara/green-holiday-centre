@@ -43,6 +43,16 @@ export default async function HomePage() {
   const featuredVehicles = (["Sedan", "SUV", "Mini Van", "Bus"] as const).flatMap(category => vehicles.filter(vehicle => vehicleCategory(vehicle.name) === category).slice(0, 3)).map(vehicle => ({
     name: vehicle.name, image: vehicle.imageUrl || "/images/vehicle-placeholder.svg", passengers: vehicle.passengerCapacity, bags: vehicle.luggageCapacity, href: `/customer/vehicles/${vehicle.id}`, available: vehicle.status === "ACTIVE",
   }));
+  // Three homepage cards, one per category when available; fill from remaining vehicles.
+  const categoryChoices = (["Sedan", "SUV", "Bus"] as const).flatMap((category) => {
+    const options = featuredVehicles.filter((vehicle) => vehicleCategory(vehicle.name) === category);
+    const chosen = options.find((vehicle) => vehicle.available) ?? options[0];
+    return chosen ? [chosen] : [];
+  });
+  const homeFeaturedVehicles = [...categoryChoices, ...featuredVehicles]
+    .filter((vehicle, index, all) => all.findIndex((entry) => entry.href === vehicle.href) === index)
+    .slice(0, 3);
+
   return (
     <>
       <Header />
@@ -183,9 +193,9 @@ export default async function HomePage() {
             <div className="mt-10">
               <ScrollReveal delay={120}>
                 <div className="grid gap-8 md:grid-cols-3">
-                  {featuredVehicles.map((vehicle) => (
+                  {homeFeaturedVehicles.map((vehicle) => (
                     <Card
-                      key={vehicle.name}
+                      key={vehicle.href}
                       className={`group relative overflow-hidden border-[var(--border-light)] bg-white/95 p-0 transition-[transform,box-shadow,background-color] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${vehicle.available ? "hover:-translate-y-2 hover:bg-white hover:shadow-[0_22px_50px_rgba(0,0,0,0.22)]" : "cursor-not-allowed opacity-60 saturate-50"}`}
                     >
                       <div className="relative h-[195px] w-full overflow-hidden bg-white">

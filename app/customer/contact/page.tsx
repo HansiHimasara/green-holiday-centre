@@ -95,10 +95,7 @@ export default function ContactPage() {
                       icon={<span className="text-[14px] font-bold">f</span>}
                     />
 
-                    <SocialButton
-                      label="Instagram"
-                      icon={<span className="text-[14px] font-bold">◎</span>}
-                    />
+                    <InstagramProfileIcon />
 
                     <SocialButton
                       label="X"
@@ -195,5 +192,54 @@ function SocialButton({
     >
       {icon}
     </button>
+  );
+}
+
+// Set NEXT_PUBLIC_GHC_INSTAGRAM_URL to the company profile URL to enable the link.
+function InstagramProfileIcon() {
+  const candidate = (process.env.NEXT_PUBLIC_GHC_INSTAGRAM_URL ?? "").trim();
+  const profileUrl = /^https:\/\/(?:www\.)?instagram\.com\/[A-Za-z0-9._]+\/?$/i.test(candidate)
+    ? candidate
+    : null;
+  const classes = "flex h-9 w-9 items-center justify-center rounded-full border border-[var(--green-primary)]/25 bg-white text-[var(--green-dark)] shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[var(--green-primary)] hover:bg-[var(--green-primary)] hover:text-white";
+
+  return profileUrl ? (
+    <a
+      href={profileUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Green Holiday Centre on Instagram"
+      className={classes}
+    >
+      <InstagramIcon />
+    </a>
+  ) : (
+    <span
+      aria-label="Instagram profile link not configured"
+      title="Instagram profile link not configured"
+      className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--green-primary)]/25 bg-white text-[var(--green-dark)]"
+    >
+      <InstagramIcon />
+    </span>
+  );
+}
+
+function InstagramIcon() {
+  return (
+    <svg
+      width={18}
+      height={18}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="2" y="2" width="20" height="20" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+    </svg>
   );
 }
