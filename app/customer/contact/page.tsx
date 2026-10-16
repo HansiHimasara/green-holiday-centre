@@ -24,11 +24,6 @@ const EMAIL = "info@greenholiday.lk";
 const WHATSAPP_NUMBER = "94770102448";
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}`;
 
-// Replace these with Green Holiday's official profile URLs.
-const FACEBOOK_URL = "https://www.facebook.com/";
-const INSTAGRAM_URL = "https://www.instagram.com/";
-const X_URL = "https://x.com/";
-
 const interactiveClasses =
   "block w-full rounded-xl text-left transition-all duration-300 hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--green-primary)]";
 

@@ -212,7 +212,7 @@ export default function PublicFeedbackClient({ initialReviews }: { initialReview
           {/* Bottom decorative detail */}
           <div className="mt-5 flex items-center justify-between border-t border-[var(--green-primary)]/10 pt-4">
             <span className="text-xs font-medium text-[var(--green-dark)]/65">
-              A traveller's story
+              A traveller&apos;s story
             </span>
             <span
               aria-hidden="true"
