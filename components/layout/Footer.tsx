@@ -128,7 +128,7 @@ function SocialIcons() {
     <div className="flex items-center gap-3">
       {/* Facebook */}
       <a
-        href="#"
+        href="https://www.facebook.com/greenholidaytravels?mibextid=wwXIfr&mibextid=wwXIfr"
         aria-label="Facebook"
         className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white/80 transition-colors hover:bg-white/20 hover:text-white"
       >
@@ -145,7 +145,7 @@ function SocialIcons() {
 
       {/* Instagram */}
       <a
-        href="#"
+        href="https://www.instagram.com/green_holiday_centre?exln=MWRvYWUyc2szeGI3OA=="
         aria-label="Instagram"
         className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white/80 transition-colors hover:bg-white/20 hover:text-white"
       >
@@ -185,7 +185,7 @@ function SocialIcons() {
 
       {/* X / Twitter */}
       <a
-        href="#"
+        href="https://x.com/GreenHolidayCen?s=20"
         aria-label="X"
         className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white/80 transition-colors hover:bg-white/20 hover:text-white"
       >
